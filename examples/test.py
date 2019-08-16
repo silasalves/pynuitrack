@@ -19,7 +19,7 @@ def b():
     print "hello world"
 
 a = Nuitrack()
-a.apply(b)
+# a.apply(b)
 a.init()
 a.release()
 

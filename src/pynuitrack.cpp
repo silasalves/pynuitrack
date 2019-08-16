@@ -64,9 +64,10 @@ class Nuitrack
     // std::string greet() { return mMsg; }
     // std::string mMsg;
 private:
-    tdv::nuitrack::HandTracker::Ptr handTracker;
+    // tdv::nuitrack::HandTracker::Ptr handTracker;
 
-    tdv::nuitrack::OutputMode _outputMode;
+    tdv::nuitrack::OutputMode _outputModeDepth;
+    tdv::nuitrack::OutputMode _outputModeColor;
 	tdv::nuitrack::DepthSensor::Ptr _depthSensor;
 	tdv::nuitrack::ColorSensor::Ptr _colorSensor;
 	tdv::nuitrack::UserTracker::Ptr _userTracker;
@@ -75,17 +76,16 @@ private:
 	tdv::nuitrack::GestureRecognizer::Ptr _gestureRecognizer;
 	tdv::nuitrack::IssuesData::Ptr _issuesData;
 
-public:
+    PyObject* _pyDepthCallback;
 
-    void apply(PyObject* callable)
+public:
+    Nuitrack()
     {
-        // Invoke callable, passing a Python object which holds a reference to x
-        boost::python::call<void>(callable);
+        _pyDepthCallback = NULL;
     }
 
-    int init(std::string configPath = "")
+    void init(std::string configPath = "")
     {
-        throw NuitrackException("Could not initialize Nuitrack");
         // Initialize Nuitrack
         try
         {
@@ -93,15 +93,48 @@ public:
         }
         catch (const tdv::nuitrack::Exception& e)
         {
-            // std::cerr << "Can not initialize Nuitrack (ExceptionType: " << e.type() << ")" << std::endl;
             throw NuitrackException("Could not initialize Nuitrack");
-            return -1;
         }
 
-        handTracker = tdv::nuitrack::HandTracker::create();
+        _depthSensor = tdv::nuitrack::DepthSensor::create();
+        _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewDepthFrame, this, std::placeholders::_1));
+        _outputModeDepth = _depthSensor->getOutputMode();
 
-        // Connect onHandUpdate callback to receive hand tracking data
-        handTracker->connectOnUpdate(onHandUpdate);
+        // _colorSensor = tdv::nuitrack::ColorSensor::create();
+        // _colorSensor->connectOnNewFrame(this->onNewRGBFrame);
+
+        // _handTracker = tdv::nuitrack::HandTracker::create();
+        // _handTracker->connectOnUpdate(onHandUpdate);
+
+
+        // _outputMode = _depthSensor->getOutputMode();
+        // OutputMode colorOutputMode = _colorSensor->getOutputMode();
+        // if (colorOutputMode.xres > _outputMode.xres)
+        // 	_outputMode.xres = colorOutputMode.xres;
+        // if (colorOutputMode.yres > _outputMode.yres)
+        // 	_outputMode.yres = colorOutputMode.yres;
+
+        // _width = _outputMode.xres;
+        // _height = _outputMode.yres;
+
+        // _userTracker = UserTracker::create();
+        // // Bind to event update user tracker
+        // _userTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onUserUpdate, this, std::placeholders::_1));
+
+        // _skeletonTracker = SkeletonTracker::create();
+        // // Bind to event update skeleton tracker
+        // _skeletonTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onSkeletonUpdate, this, std::placeholders::_1));
+
+        // _handTracker = HandTracker::create();
+        // // Bind to event update Hand tracker
+        // _handTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onHandUpdate, this, std::placeholders::_1));
+
+        // _gestureRecognizer = GestureRecognizer::create();
+        // _gestureRecognizer->connectOnNewGestures(std::bind(&NuitrackGLSample::onNewGesture, this, std::placeholders::_1));
+
+        // _onIssuesUpdateHandler = Nuitrack::connectOnIssuesUpdate(std::bind(&NuitrackGLSample::onIssuesUpdate,
+        //                                                                   this, std::placeholders::_1));
+
 
         // Start Nuitrack
         try
@@ -110,32 +143,56 @@ public:
         }
         catch (const tdv::nuitrack::Exception& e)
         {
-            std::cerr << "Can not start Nuitrack (ExceptionType: " << e.type() << ")" << std::endl;
-            return EXIT_FAILURE;
+            throw NuitrackException("Could not run Nuitrack"); // e.type());
         }
 
-        int errorCode = EXIT_SUCCESS;
-        int a = 100;
-        while (a--)
+        // int errorCode = EXIT_SUCCESS;
+        // int a = 100;
+        // while (a--)
+        // {
+        //     try
+        //     {
+        //         // Wait for new hand tracking data
+        //         tdv::nuitrack::Nuitrack::waitUpdate(_handTracker);
+        //     }
+        //     catch (tdv::nuitrack::LicenseNotAcquiredException& e)
+        //     {
+        //         std::cerr << "LicenseNotAcquired exception (ExceptionType: " << e.type() << ")" << std::endl;
+        //         errorCode = EXIT_FAILURE;
+        //         break;
+        //     }
+        //     catch (const tdv::nuitrack::Exception& e)
+        //     {
+        //         std::cerr << "Nuitrack update failed (ExceptionType: " << e.type() << ")" << std::endl;
+        //         errorCode = EXIT_FAILURE;
+        //     }
+        // }
+    }
+
+    void set_depth_callback(PyObject* callable)
+    {
+        // Invoke callable, passing a Python object which holds a reference to x
+        // boost::python::call<void>(callable);
+        _pyDepthCallback = callable;
+    }
+
+    void onNewDepthFrame(tdv::nuitrack::DepthFrame::Ptr frame)
+    {
+        if (_pyDepthCallback != NULL)
         {
-            try
-            {
-                // Wait for new hand tracking data
-                tdv::nuitrack::Nuitrack::waitUpdate(handTracker);
-            }
-            catch (tdv::nuitrack::LicenseNotAcquiredException& e)
-            {
-                std::cerr << "LicenseNotAcquired exception (ExceptionType: " << e.type() << ")" << std::endl;
-                errorCode = EXIT_FAILURE;
-                break;
-            }
-            catch (const tdv::nuitrack::Exception& e)
-            {
-                std::cerr << "Nuitrack update failed (ExceptionType: " << e.type() << ")" << std::endl;
-                errorCode = EXIT_FAILURE;
-            }
+            const uint16_t* depthPtr = frame->getData();
+            float nCols = frame->getCols();
+	        float nRows = frame->getRows();
+
+            boost::python::call<void>(_pyDepthCallback);
         }
     }
+
+    void onNewRGBFrame(tdv::nuitrack::RGBFrame::Ptr frame)
+    {
+        return;
+    }
+
 
     // Callback for the hand data update event
     static void onHandUpdate(tdv::nuitrack::HandTrackerData::Ptr handData)
@@ -184,7 +241,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
     register_exception_translator<NuitrackException>(&translateException);
     register_exception_translator<NuitrackInitFail>(&translateException);
 
-    class_<Nuitrack>("Nuitrack")
+    class_<Nuitrack>("Nuitrack", boost::python::init<>())
         // .def("greet", &World::greet)
         // .def("set", &World::set)
         // .def("many", &World::many)
@@ -193,5 +250,5 @@ BOOST_PYTHON_MODULE(pynuitrack)
             "Path to the configuration file"
         ))
         .def("release", &Nuitrack::release)
-        .def("apply", &Nuitrack::apply);
+    ;
 };
