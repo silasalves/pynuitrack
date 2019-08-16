@@ -12,15 +12,15 @@
 import sys
 sys.path.insert(1, '../build')
 
-from pynuitrack import NuiTrack
+from pynuitrack import Nuitrack
 from time import sleep
 
 def b():
     print "hello world"
 
-a = NuiTrack()
+a = Nuitrack()
 a.apply(b)
-# a.init("")
-# a.release()
+a.init()
+a.release()
 
 

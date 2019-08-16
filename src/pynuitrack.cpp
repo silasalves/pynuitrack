@@ -1,6 +1,12 @@
+#include "pynuitrack.hpp"
+
 #include <boost/python.hpp>
 #include <boost/python/list.hpp>
 #include <boost/python/extract.hpp>
+#include <boost/python/module.hpp>
+#include <boost/python/def.hpp>
+#include <boost/python/exception_translator.hpp>
+
 #include <string>
 #include <sstream>
 #include <vector>
@@ -8,7 +14,41 @@
 #include <nuitrack/Nuitrack.h>
 #include <iomanip>
 
-class NuiTrack
+// struct NuitrackInitFail : std::exception
+// {
+//   char const* what() throw() { return "One of my exceptions"; }
+// };
+
+class NuitrackException : public std::exception
+{
+private:
+    std::string message;
+
+public:
+    NuitrackException(std::string message)
+    {
+        this->message = message;
+    }
+
+    const char *what() const throw()
+    {
+        return this->message.c_str();
+    }
+
+    ~NuitrackException() throw()
+    {
+    }
+};
+
+class NuitrackInitFail : public NuitrackException {};
+
+void translateException(NuitrackException const& e)
+{
+    // Use the Python 'C' API to set up an exception object
+    PyErr_SetString(PyExc_RuntimeError, e.what());
+}
+
+class Nuitrack
 {
     // void set(std::string msg) { mMsg = msg; }
     // void many(boost::python::list msgs) {
@@ -26,6 +66,15 @@ class NuiTrack
 private:
     tdv::nuitrack::HandTracker::Ptr handTracker;
 
+    tdv::nuitrack::OutputMode _outputMode;
+	tdv::nuitrack::DepthSensor::Ptr _depthSensor;
+	tdv::nuitrack::ColorSensor::Ptr _colorSensor;
+	tdv::nuitrack::UserTracker::Ptr _userTracker;
+	tdv::nuitrack::SkeletonTracker::Ptr _skeletonTracker;
+	tdv::nuitrack::HandTracker::Ptr _handTracker;
+	tdv::nuitrack::GestureRecognizer::Ptr _gestureRecognizer;
+	tdv::nuitrack::IssuesData::Ptr _issuesData;
+
 public:
 
     void apply(PyObject* callable)
@@ -34,8 +83,9 @@ public:
         boost::python::call<void>(callable);
     }
 
-    int init(std::string configPath)
+    int init(std::string configPath = "")
     {
+        throw NuitrackException("Could not initialize Nuitrack");
         // Initialize Nuitrack
         try
         {
@@ -43,7 +93,8 @@ public:
         }
         catch (const tdv::nuitrack::Exception& e)
         {
-            std::cerr << "Can not initialize Nuitrack (ExceptionType: " << e.type() << ")" << std::endl;
+            // std::cerr << "Can not initialize Nuitrack (ExceptionType: " << e.type() << ")" << std::endl;
+            throw NuitrackException("Could not initialize Nuitrack");
             return -1;
         }
 
@@ -126,14 +177,21 @@ public:
 
 using namespace boost::python;
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(nt_init_overloads, Nuitrack::init, 0, 1)
+
 BOOST_PYTHON_MODULE(pynuitrack)
 {
-    class_<NuiTrack>("NuiTrack")
+    register_exception_translator<NuitrackException>(&translateException);
+    register_exception_translator<NuitrackInitFail>(&translateException);
+
+    class_<Nuitrack>("Nuitrack")
         // .def("greet", &World::greet)
         // .def("set", &World::set)
         // .def("many", &World::many)
-        .def("init", &NuiTrack::init)
-        .def("release", &NuiTrack::release)
-        .def("apply", &NuiTrack::apply)
-    ;
+        .def("init", &Nuitrack::init, nt_init_overloads(
+            boost::python::arg("configPath")="", 
+            "Path to the configuration file"
+        ))
+        .def("release", &Nuitrack::release)
+        .def("apply", &Nuitrack::apply);
 };
