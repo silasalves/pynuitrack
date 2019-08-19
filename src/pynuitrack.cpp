@@ -81,11 +81,17 @@ private:
 	tdv::nuitrack::IssuesData::Ptr _issuesData;
 
     PyObject* _pyDepthCallback;
+    PyObject* _pyColorCallback;
+
+    np::dtype _dtUInt8 = np::dtype::get_builtin<uint8_t>();
+    np::dtype _dtUInt16 = np::dtype::get_builtin<uint16_t>();
 
 public:
     Nuitrack()
     {
         _pyDepthCallback = NULL;
+        _dtUInt8 = np::dtype::get_builtin<uint8_t>();
+        _dtUInt16 = np::dtype::get_builtin<uint16_t>();
     }
 
     void init(std::string configPath = "")
@@ -102,10 +108,10 @@ public:
 
         _depthSensor = tdv::nuitrack::DepthSensor::create();
         _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewDepthFrame, this, std::placeholders::_1));
-        _outputModeDepth = _depthSensor->getOutputMode();
+        // _outputModeDepth = _depthSensor->getOutputMode();
 
-        // _colorSensor = tdv::nuitrack::ColorSensor::create();
-        // _colorSensor->connectOnNewFrame(this->onNewRGBFrame);
+        _colorSensor = tdv::nuitrack::ColorSensor::create();
+        _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewRGBFrame, this, std::placeholders::_1));
 
         // _handTracker = tdv::nuitrack::HandTracker::create();
         // _handTracker->connectOnUpdate(onHandUpdate);
@@ -196,6 +202,11 @@ public:
         _pyDepthCallback = callable;
     }
 
+    void setColorCallback(PyObject* callable)
+    {
+        _pyColorCallback = callable;
+    }
+
 
     void onSkeletonUpdate(tdv::nuitrack::SkeletonData::Ptr userSkeletons)
     {
@@ -211,8 +222,7 @@ public:
             int nCols = frame->getCols();
 	        int nRows = frame->getRows();
 
-            np::dtype dt = np::dtype::get_builtin<uint16_t>();
-            np::ndarray npData = np::from_data(depthPtr, dt,
+            np::ndarray npData = np::from_data(depthPtr, _dtUInt16,
                                             bp::make_tuple(nRows, nCols),
                                             bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
                                             bp::object());
@@ -223,7 +233,21 @@ public:
 
     void onNewRGBFrame(tdv::nuitrack::RGBFrame::Ptr frame)
     {
-        return;
+        if (_pyColorCallback != NULL)
+        {
+            const uint8_t* colorPtr = (uint8_t*) frame->getData();
+            int nCols = frame->getCols();
+	        int nRows = frame->getRows();
+
+            std::cout << nCols << ", " << nRows << std::endl;
+
+            np::ndarray npData = np::from_data(colorPtr, _dtUInt8,
+                                            bp::make_tuple(nRows, nCols, 3),
+                                            bp::make_tuple(nCols * 3 * sizeof(uint8_t), 3 * sizeof(uint8_t), sizeof(uint8_t)),
+                                            bp::object());
+
+            boost::python::call<void>(_pyColorCallback, npData.copy());
+        }
     }
 
 
@@ -303,6 +327,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         ))
         .def("release", &Nuitrack::release)
         .def("set_depth_callback", &Nuitrack::setDepthCallback)
+        .def("set_color_callback", &Nuitrack::setColorCallback)
         .def("update", &Nuitrack::update)
         .def("test", &Nuitrack::test)
     ;

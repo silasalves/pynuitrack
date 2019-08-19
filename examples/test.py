@@ -14,7 +14,10 @@ def b():
 def depthCallback(data):
     cv2.imshow('Depth', data * 32)
     cv2.waitKey(1)
-    
+
+def colorCallback(data):
+    cv2.imshow('Color', data)
+    cv2.waitKey(1)
 
 
 
@@ -23,6 +26,7 @@ def depthCallback(data):
 a = Nuitrack()
 # a.apply(b)
 a.set_depth_callback(depthCallback)
+a.set_color_callback(colorCallback)
 a.init()
 # sleep(5)
 
