@@ -125,9 +125,9 @@ public:
         // // Bind to event update user tracker
         // _userTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onUserUpdate, this, std::placeholders::_1));
 
-        // _skeletonTracker = SkeletonTracker::create();
-        // // Bind to event update skeleton tracker
-        // _skeletonTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onSkeletonUpdate, this, std::placeholders::_1));
+        _skeletonTracker = tdv::nuitrack::SkeletonTracker::create();
+        // Bind to event update skeleton tracker
+        _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
 
         // _handTracker = HandTracker::create();
         // // Bind to event update Hand tracker
@@ -173,33 +173,51 @@ public:
         // }
     }
 
-    void set_depth_callback(PyObject* callable)
+    void update()
     {
-        // Invoke callable, passing a Python object which holds a reference to x
-        // boost::python::call<void>(callable);
+        try
+        {
+            tdv::nuitrack::Nuitrack::waitUpdate(_skeletonTracker);
+        }
+        catch (tdv::nuitrack::LicenseNotAcquiredException& e)
+        {
+            throw NuitrackException("License not acquired.");
+        }
+        catch (const tdv::nuitrack::Exception& e)
+        {
+            throw NuitrackException("Nuitrack update failed.");
+            // std::cerr << "Nuitrack update failed (ExceptionType: " << e.type() << ")" << std::endl;
+            // errorCode = EXIT_FAILURE;
+        }
+    }
+
+    void setDepthCallback(PyObject* callable)
+    {
         _pyDepthCallback = callable;
     }
+
+
+    void onSkeletonUpdate(tdv::nuitrack::SkeletonData::Ptr userSkeletons)
+    {
+        return;
+    }
+
 
     void onNewDepthFrame(tdv::nuitrack::DepthFrame::Ptr frame)
     {
         if (_pyDepthCallback != NULL)
         {
             const uint16_t* depthPtr = frame->getData();
-            float nCols = frame->getCols();
-	        float nRows = frame->getRows();
+            int nCols = frame->getCols();
+	        int nRows = frame->getRows();
 
-            // uint8_t mul_data[][4] = {{1,2,3,4},{5,6,7,8},{1,3,5,7}};
-            // auto shape = bp::make_tuple(3,2);
-            // auto stride = bp::make_tuple(sizeof(uint8_t)*2,sizeof(uint8_t));
-            
             np::dtype dt = np::dtype::get_builtin<uint16_t>();
             np::ndarray npData = np::from_data(depthPtr, dt,
-                                            bp::make_tuple(3,4),
-                                            bp::make_tuple(4,1),
+                                            bp::make_tuple(nRows, nCols),
+                                            bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
                                             bp::object());
-            //return npData;
 
-            boost::python::call<void>(_pyDepthCallback);
+            boost::python::call<void>(_pyDepthCallback, npData.copy());
         }
     }
 
@@ -284,6 +302,8 @@ BOOST_PYTHON_MODULE(pynuitrack)
             "Path to the configuration file"
         ))
         .def("release", &Nuitrack::release)
+        .def("set_depth_callback", &Nuitrack::setDepthCallback)
+        .def("update", &Nuitrack::update)
         .def("test", &Nuitrack::test)
     ;
 };
