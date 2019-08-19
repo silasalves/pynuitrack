@@ -53,7 +53,8 @@ message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
 
 #ENABLE_TESTING()
 INCLUDE_DIRECTORIES(
-  ${Boost_INCLUDE_DIRS}
+  # ${Boost_INCLUDE_DIRS}
+  /home/silas/workspace/boost_1_70_0/
   ${PYTHON_INCLUDE_DIRS}
   ${NUITRACK_SDK_PATH}/Nuitrack/include
   ${NUITRACK_SDK_PATH}/Nuitrack/include/middleware
@@ -64,7 +65,9 @@ link_directories(
 )
 
 LINK_LIBRARIES(
-  ${Boost_LIBRARIES}
+  # ${Boost_LIBRARIES}
+  /home/silas/workspace/boost_1_70_0/stage/lib/libboost_python27.so
+  /home/silas/workspace/boost_1_70_0/stage/lib/libboost_numpy27.so
   ${PYTHON_LIBRARIES}
   nuitrack
 ) # Deprecated but so convenient!
