@@ -6,6 +6,7 @@
 #include <boost/python/module.hpp>
 #include <boost/python/def.hpp>
 #include <boost/python/exception_translator.hpp>
+#include <boost/python/numpy.hpp>
 
 #include <string>
 #include <sstream>
@@ -13,6 +14,9 @@
 
 #include <nuitrack/Nuitrack.h>
 #include <iomanip>
+
+namespace bp = boost::python;
+namespace np = boost::python::numpy;
 
 // struct NuitrackInitFail : std::exception
 // {
@@ -184,6 +188,17 @@ public:
             float nCols = frame->getCols();
 	        float nRows = frame->getRows();
 
+            // uint8_t mul_data[][4] = {{1,2,3,4},{5,6,7,8},{1,3,5,7}};
+            // auto shape = bp::make_tuple(3,2);
+            // auto stride = bp::make_tuple(sizeof(uint8_t)*2,sizeof(uint8_t));
+            
+            np::dtype dt = np::dtype::get_builtin<uint16_t>();
+            np::ndarray npData = np::from_data(depthPtr, dt,
+                                            bp::make_tuple(3,4),
+                                            bp::make_tuple(4,1),
+                                            bp::object());
+            //return npData;
+
             boost::python::call<void>(_pyDepthCallback);
         }
     }
@@ -230,6 +245,22 @@ public:
     {
         tdv::nuitrack::Nuitrack::release();
     }
+
+    np::ndarray test()
+    {
+        int data[] = {1,2,3,4,5,6};
+        np::dtype dt = np::dtype::get_builtin<int>();
+        bp::tuple shape = bp::make_tuple(2,3);
+        bp::tuple stride = bp::make_tuple(12,4);
+        bp::object own;
+        np::ndarray data_ex1 = np::from_data(data, dt, shape, stride, own);
+
+        std::cout << "Single dimensional array ::" << std::endl
+          << bp::extract<char const *>(bp::str(data_ex1)) << std::endl;
+
+
+        return data_ex1.copy();
+    }
 };
 
 using namespace boost::python;
@@ -238,6 +269,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(nt_init_overloads, Nuitrack::init, 0, 1)
 
 BOOST_PYTHON_MODULE(pynuitrack)
 {
+    Py_Initialize();
+    np::initialize();
+
     register_exception_translator<NuitrackException>(&translateException);
     register_exception_translator<NuitrackInitFail>(&translateException);
 
@@ -250,5 +284,6 @@ BOOST_PYTHON_MODULE(pynuitrack)
             "Path to the configuration file"
         ))
         .def("release", &Nuitrack::release)
+        .def("test", &Nuitrack::test)
     ;
 };
