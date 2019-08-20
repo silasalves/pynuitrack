@@ -19,10 +19,6 @@ namespace nt = tdv::nuitrack;
 namespace bp = boost::python;
 namespace np = boost::python::numpy;
 
-// struct NuitrackInitFail : std::exception
-// {
-//   char const* what() throw() { return "One of my exceptions"; }
-// };
 
 class NuitrackException : public std::exception
 {
@@ -55,22 +51,7 @@ void translateException(NuitrackException const& e)
 
 class Nuitrack
 {
-    // void set(std::string msg) { mMsg = msg; }
-    // void many(boost::python::list msgs) {
-    //     long l = len(msgs);
-    //     std::stringstream ss;
-    //     for (long i = 0; i<l; ++i) {
-    //         if (i>0) ss << ", ";
-    //         std::string s = boost::python::extract<std::string>(msgs[i]);
-    //         ss << s;
-    //     }
-    //     mMsg = ss.str();
-    // }
-    // std::string greet() { return mMsg; }
-    // std::string mMsg;
 private:
-    // tdv::nuitrack::HandTracker::Ptr handTracker;
-
     tdv::nuitrack::OutputMode _outputModeDepth;
     tdv::nuitrack::OutputMode _outputModeColor;
 	tdv::nuitrack::DepthSensor::Ptr _depthSensor;
@@ -84,6 +65,8 @@ private:
     PyObject* _pyDepthCallback;
     PyObject* _pyColorCallback;
     PyObject* _pySkeletonCallback;
+    PyObject* _pyHandsCallback;
+    PyObject* _pyUserCallback;
 
     np::dtype _dtUInt8 = np::dtype::get_builtin<uint8_t>();
     np::dtype _dtUInt16 = np::dtype::get_builtin<uint16_t>();
@@ -92,6 +75,8 @@ private:
     bp::api::object _collections;
     bp::api::object _namedtuple;
     bp::api::object _Joint;
+    bp::api::object _Hand;
+    bp::api::object _UserHands;
 
 public:
     Nuitrack()
@@ -99,17 +84,32 @@ public:
         _pyDepthCallback = NULL;
         _pyColorCallback = NULL;
         _pySkeletonCallback = NULL;
+        _pyHandsCallback = NULL;
+        _pyUserCallback = NULL;
 
         _collections = bp::import("collections");
         _namedtuple = _collections.attr("namedtuple");
 
-        bp::list fields;
-        fields.append("type");
-        fields.append("confidence");
-        fields.append("real");
-        fields.append("projection");
-        fields.append("orientation");
-        _Joint = _namedtuple("Joint", fields);
+        bp::list fieldsJoint;
+        fieldsJoint.append("type");
+        fieldsJoint.append("confidence");
+        fieldsJoint.append("real");
+        fieldsJoint.append("projection");
+        fieldsJoint.append("orientation");
+        _Joint = _namedtuple("Joint", fieldsJoint);
+
+        bp::list fieldsUserHands;
+        fieldsUserHands.append("userID");
+        fieldsUserHands.append("left");
+        fieldsUserHands.append("right");
+        _UserHands = _namedtuple("UserHands", fieldsUserHands);
+
+        bp::list fieldsHand;
+        fieldsHand.append("click");
+        fieldsHand.append("pressure");
+        fieldsHand.append("proj");
+        fieldsHand.append("real");
+        _Hand = _namedtuple("Hand", fieldsHand);
     }
 
     void init(std::string configPath = "")
@@ -132,19 +132,8 @@ public:
         _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewRGBFrame, this, std::placeholders::_1));
         _outputModeColor = _colorSensor->getOutputMode();
 
-        // _handTracker = tdv::nuitrack::HandTracker::create();
-        // _handTracker->connectOnUpdate(onHandUpdate);
-
-
-        // _outputMode = _depthSensor->getOutputMode();
-        // OutputMode colorOutputMode = _colorSensor->getOutputMode();
-        // if (colorOutputMode.xres > _outputMode.xres)
-        // 	_outputMode.xres = colorOutputMode.xres;
-        // if (colorOutputMode.yres > _outputMode.yres)
-        // 	_outputMode.yres = colorOutputMode.yres;
-
-        // _width = _outputMode.xres;
-        // _height = _outputMode.yres;
+        _handTracker = tdv::nuitrack::HandTracker::create();
+        _handTracker->connectOnUpdate(std::bind(&Nuitrack::onHandUpdate, this, std::placeholders::_1));
 
         // _userTracker = UserTracker::create();
         // // Bind to event update user tracker
@@ -152,10 +141,6 @@ public:
 
         _skeletonTracker = tdv::nuitrack::SkeletonTracker::create();
         _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
-
-        // _handTracker = HandTracker::create();
-        // // Bind to event update Hand tracker
-        // _handTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onHandUpdate, this, std::placeholders::_1));
 
         // _gestureRecognizer = GestureRecognizer::create();
         // _gestureRecognizer->connectOnNewGestures(std::bind(&NuitrackGLSample::onNewGesture, this, std::placeholders::_1));
@@ -173,28 +158,6 @@ public:
         {
             throw NuitrackException("Could not run Nuitrack"); // e.type());
         }
-
-        // int errorCode = EXIT_SUCCESS;
-        // int a = 100;
-        // while (a--)
-        // {
-        //     try
-        //     {
-        //         // Wait for new hand tracking data
-        //         tdv::nuitrack::Nuitrack::waitUpdate(_handTracker);
-        //     }
-        //     catch (tdv::nuitrack::LicenseNotAcquiredException& e)
-        //     {
-        //         std::cerr << "LicenseNotAcquired exception (ExceptionType: " << e.type() << ")" << std::endl;
-        //         errorCode = EXIT_FAILURE;
-        //         break;
-        //     }
-        //     catch (const tdv::nuitrack::Exception& e)
-        //     {
-        //         std::cerr << "Nuitrack update failed (ExceptionType: " << e.type() << ")" << std::endl;
-        //         errorCode = EXIT_FAILURE;
-        //     }
-        // }
     }
 
     void update()
@@ -228,6 +191,11 @@ public:
     void setSkeletonCallback(PyObject* callable)
     {
         _pySkeletonCallback = callable;
+    }
+
+    void setHandsCallback(PyObject* callable)
+    {
+        _pyHandsCallback = callable;
     }
 
     bp::api::object _extractJointData(tdv::nuitrack::Joint joint)
@@ -336,37 +304,56 @@ public:
         }
     }
 
+    bp::api::object _extractHandData(nt::Hand::Ptr hand)
+    {
+        if (hand)
+        {
+            float fProj[] = {hand->x * _outputModeColor.xres,
+                             hand->y * _outputModeColor.yres};
+    
+            np::ndarray proj = np::from_data(fProj, _dtFloat,
+                                            bp::make_tuple(2),
+                                            bp::make_tuple(sizeof(float)),
+                                            bp::object());
+            
+            float fReal[] = {hand->xReal, hand->yReal, hand->zReal};
+    
+            np::ndarray real = np::from_data(fReal, _dtFloat,
+                                            bp::make_tuple(3),
+                                            bp::make_tuple(sizeof(float)),
+                                            bp::object());
+            
+            return _Hand(hand->click, hand->pressure, proj.copy(), real.copy());
+        }
+        else
+            return bp::object();
+    }
 
     // Callback for the hand data update event
-    static void onHandUpdate(tdv::nuitrack::HandTrackerData::Ptr handData)
+    void onHandUpdate(nt::HandTrackerData::Ptr handData)
     {
-        if (!handData)
+        if (_pyHandsCallback && handData)
         {
-            // No hand data
-            std::cout << "No hand data" << std::endl;
-            return;
-        }
+            bp::list listUserHands;
 
-        auto userHands = handData->getUsersHands();
-        if (userHands.empty())
-        {
-            // No user hands
-            return;
-        }
+            for (nt::UserHands hands : handData->getUsersHands())
+            {
+                auto data = _UserHands(
+                    hands.userId,
+                    _extractHandData(hands.leftHand), 
+                    _extractHandData(hands.leftHand));
 
-        auto rightHand = userHands[0].rightHand;
-        if (!rightHand)
-        {
-            // No right hand
-            std::cout << "Right hand of the first user is not found" << std::endl;
-            return;
-        }
+                listUserHands.append(data);
+            }
 
-        std::cout << std::fixed << std::setprecision(3);
-        std::cout << "Right hand position: "
-                    "x = " << rightHand->xReal << ", "
-                    "y = " << rightHand->yReal << ", "
-                    "z = " << rightHand->zReal << std::endl;
+            auto data = bp::make_tuple(
+                handData->getTimestamp(),
+                handData->getNumUsers(),
+                listUserHands
+            );
+
+            bp::call<void>(_pyHandsCallback, data);
+        }
     }
 
     void release()
@@ -418,6 +405,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_depth_callback", &Nuitrack::setDepthCallback)
         .def("set_color_callback", &Nuitrack::setColorCallback)
         .def("set_skeleton_callback", &Nuitrack::setSkeletonCallback)
+        .def("set_hands_callback", &Nuitrack::setHandsCallback)
         .def("update", &Nuitrack::update)
         .def("test", &Nuitrack::test)
     ;
