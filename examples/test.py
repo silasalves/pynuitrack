@@ -12,32 +12,38 @@ def b():
     print "hello world"
 
 def depthCallback(data):
-    cv2.imshow('Depth', data * 32)
-    cv2.waitKey(1)
+    print "d"
+    # cv2.imshow('Depth', data * 32)
+    # cv2.waitKey(1)
 
 def colorCallback(data):
-    cv2.imshow('Color', data)
-    cv2.waitKey(1)
+    print "c"
+    # cv2.imshow('Color', data)
+    # cv2.waitKey(1)
 
+def skelCallback(data):
+    print "s"
+    # print data
 
 
 
 
 a = Nuitrack()
-# a.apply(b)
+# print a.test()
+
 a.set_depth_callback(depthCallback)
 a.set_color_callback(colorCallback)
+a.set_skeleton_callback(skelCallback)
+
 a.init()
-# sleep(5)
 
-frames = 150
+# a.update()
+
+frames = 10
 while frames:
+    print "-"
     a.update()
+    print "u"
     frames -= 1
+
 a.release()
-
-# plt.ioff()
-
-# b = a.test()
-# print type(b)
-# print b

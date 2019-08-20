@@ -15,6 +15,7 @@
 #include <nuitrack/Nuitrack.h>
 #include <iomanip>
 
+namespace nt = tdv::nuitrack;
 namespace bp = boost::python;
 namespace np = boost::python::numpy;
 
@@ -82,16 +83,33 @@ private:
 
     PyObject* _pyDepthCallback;
     PyObject* _pyColorCallback;
+    PyObject* _pySkeletonCallback;
 
     np::dtype _dtUInt8 = np::dtype::get_builtin<uint8_t>();
     np::dtype _dtUInt16 = np::dtype::get_builtin<uint16_t>();
+    np::dtype _dtFloat = np::dtype::get_builtin<float>();
+
+    bp::api::object _collections;
+    bp::api::object _namedtuple;
+    bp::api::object _Joint;
 
 public:
     Nuitrack()
     {
         _pyDepthCallback = NULL;
-        _dtUInt8 = np::dtype::get_builtin<uint8_t>();
-        _dtUInt16 = np::dtype::get_builtin<uint16_t>();
+        _pyColorCallback = NULL;
+        _pySkeletonCallback = NULL;
+
+        _collections = bp::import("collections");
+        _namedtuple = _collections.attr("namedtuple");
+
+        bp::list fields;
+        fields.append("type");
+        fields.append("confidence");
+        fields.append("real");
+        fields.append("projection");
+        fields.append("orientation");
+        _Joint = _namedtuple("Joint", fields);
     }
 
     void init(std::string configPath = "")
@@ -108,10 +126,11 @@ public:
 
         _depthSensor = tdv::nuitrack::DepthSensor::create();
         _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewDepthFrame, this, std::placeholders::_1));
-        // _outputModeDepth = _depthSensor->getOutputMode();
+        _outputModeDepth = _depthSensor->getOutputMode();
 
         _colorSensor = tdv::nuitrack::ColorSensor::create();
         _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewRGBFrame, this, std::placeholders::_1));
+        _outputModeColor = _colorSensor->getOutputMode();
 
         // _handTracker = tdv::nuitrack::HandTracker::create();
         // _handTracker->connectOnUpdate(onHandUpdate);
@@ -132,7 +151,6 @@ public:
         // _userTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onUserUpdate, this, std::placeholders::_1));
 
         _skeletonTracker = tdv::nuitrack::SkeletonTracker::create();
-        // Bind to event update skeleton tracker
         _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
 
         // _handTracker = HandTracker::create();
@@ -207,10 +225,80 @@ public:
         _pyColorCallback = callable;
     }
 
+    void setSkeletonCallback(PyObject* callable)
+    {
+        _pySkeletonCallback = callable;
+    }
+
+    bp::api::object _extractJointData(tdv::nuitrack::Joint joint)
+    {
+        float fReal[] = {joint.real.x, joint.real.y, joint.real.z};
+        
+        np::ndarray real = np::from_data(fReal, _dtFloat,
+                                        bp::make_tuple(3),
+                                        bp::make_tuple(sizeof(float)),
+                                        bp::object());
+
+        float fProj[] = {joint.proj.x * _outputModeColor.xres,
+                         joint.proj.y * _outputModeColor.yres,
+                         joint.proj.z };
+        
+        np::ndarray proj = np::from_data(fProj, _dtFloat,
+                                        bp::make_tuple(3),
+                                        bp::make_tuple(sizeof(float)),
+                                        bp::object());
+        
+        np::ndarray orientation = np::from_data(joint.orient.matrix, _dtFloat,
+                                        bp::make_tuple(3, 3),
+                                        bp::make_tuple(3 * sizeof(float), sizeof(float)),
+                                        bp::object());
+
+        return _Joint((int)joint.type,
+                      joint.confidence, 
+                      real.copy(),
+                      proj.copy(),
+                      orientation.copy());
+    }
 
     void onSkeletonUpdate(tdv::nuitrack::SkeletonData::Ptr userSkeletons)
     {
-        return;
+        if (_pySkeletonCallback)
+        {
+            bp::list listSkel;
+            auto skeletons = userSkeletons->getSkeletons();
+            for (tdv::nuitrack::Skeleton skeleton: skeletons)
+            {
+                bp::list listJoint;
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_HEAD]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_NECK]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_TORSO]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_WAIST]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_COLLAR]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_SHOULDER]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_ELBOW]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_WRIST]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_HAND]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_COLLAR]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_SHOULDER]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_ELBOW]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_WRIST]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_HAND]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_HIP]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_KNEE]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_ANKLE]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_HIP]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_KNEE]));
+                listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_ANKLE]));
+                listSkel.append(listJoint);
+            }
+
+            bp::tuple data =  bp::make_tuple(
+                userSkeletons->getTimestamp(),
+                userSkeletons->getNumSkeletons(),
+                listSkel);
+            
+            boost::python::call<void>(_pySkeletonCallback, data);
+        }
     }
 
 
@@ -238,8 +326,6 @@ public:
             const uint8_t* colorPtr = (uint8_t*) frame->getData();
             int nCols = frame->getCols();
 	        int nRows = frame->getRows();
-
-            std::cout << nCols << ", " << nRows << std::endl;
 
             np::ndarray npData = np::from_data(colorPtr, _dtUInt8,
                                             bp::make_tuple(nRows, nCols, 3),
@@ -288,20 +374,23 @@ public:
         tdv::nuitrack::Nuitrack::release();
     }
 
-    np::ndarray test()
+    bp::api::object test()
     {
-        int data[] = {1,2,3,4,5,6};
-        np::dtype dt = np::dtype::get_builtin<int>();
-        bp::tuple shape = bp::make_tuple(2,3);
-        bp::tuple stride = bp::make_tuple(12,4);
-        bp::object own;
-        np::ndarray data_ex1 = np::from_data(data, dt, shape, stride, own);
+        // int data[] = {1,2,3,4,5,6};
+        // np::dtype dt = np::dtype::get_builtin<int>();
+        // bp::tuple shape = bp::make_tuple(2,3);
+        // bp::tuple stride = bp::make_tuple(12,4);
+        // bp::object own;
+        // np::ndarray data_ex1 = np::from_data(data, dt, shape, stride, own);
 
-        std::cout << "Single dimensional array ::" << std::endl
-          << bp::extract<char const *>(bp::str(data_ex1)) << std::endl;
+        // std::cout << "Single dimensional array ::" << std::endl
+        //   << bp::extract<char const *>(bp::str(data_ex1)) << std::endl;
 
 
-        return data_ex1.copy();
+        // return data_ex1.copy();
+        // ---------------------------------------------
+        return _Joint(1,2,3,4);
+
     }
 };
 
@@ -328,6 +417,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("release", &Nuitrack::release)
         .def("set_depth_callback", &Nuitrack::setDepthCallback)
         .def("set_color_callback", &Nuitrack::setColorCallback)
+        .def("set_skeleton_callback", &Nuitrack::setSkeletonCallback)
         .def("update", &Nuitrack::update)
         .def("test", &Nuitrack::test)
     ;
