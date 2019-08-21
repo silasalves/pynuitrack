@@ -45,7 +45,6 @@ class NuitrackInitFail : public NuitrackException {};
 
 void translateException(NuitrackException const& e)
 {
-    // Use the Python 'C' API to set up an exception object
     PyErr_SetString(PyExc_RuntimeError, e.what());
 }
 
@@ -156,7 +155,9 @@ public:
         }
         catch (const tdv::nuitrack::Exception& e)
         {
-            throw NuitrackException("Could not run Nuitrack"); // e.type());
+            std::string msg("Nuitrack update failed: ");
+            msg += exceptionType_str[e.type()];
+            throw NuitrackException(msg);
         }
     }
 
@@ -172,9 +173,9 @@ public:
         }
         catch (const tdv::nuitrack::Exception& e)
         {
-            throw NuitrackException("Nuitrack update failed.");
-            // std::cerr << "Nuitrack update failed (ExceptionType: " << e.type() << ")" << std::endl;
-            // errorCode = EXIT_FAILURE;
+            std::string msg("Nuitrack update failed: ");
+            msg += exceptionType_str[e.type()];
+            throw NuitrackException(msg);
         }
     }
 
@@ -360,25 +361,6 @@ public:
     {
         tdv::nuitrack::Nuitrack::release();
     }
-
-    bp::api::object test()
-    {
-        // int data[] = {1,2,3,4,5,6};
-        // np::dtype dt = np::dtype::get_builtin<int>();
-        // bp::tuple shape = bp::make_tuple(2,3);
-        // bp::tuple stride = bp::make_tuple(12,4);
-        // bp::object own;
-        // np::ndarray data_ex1 = np::from_data(data, dt, shape, stride, own);
-
-        // std::cout << "Single dimensional array ::" << std::endl
-        //   << bp::extract<char const *>(bp::str(data_ex1)) << std::endl;
-
-
-        // return data_ex1.copy();
-        // ---------------------------------------------
-        return _Joint(1,2,3,4);
-
-    }
 };
 
 using namespace boost::python;
@@ -394,9 +376,6 @@ BOOST_PYTHON_MODULE(pynuitrack)
     register_exception_translator<NuitrackInitFail>(&translateException);
 
     class_<Nuitrack>("Nuitrack", boost::python::init<>())
-        // .def("greet", &World::greet)
-        // .def("set", &World::set)
-        // .def("many", &World::many)
         .def("init", &Nuitrack::init, nt_init_overloads(
             boost::python::arg("configPath")="", 
             "Path to the configuration file"
@@ -407,6 +386,5 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_skeleton_callback", &Nuitrack::setSkeletonCallback)
         .def("set_hands_callback", &Nuitrack::setHandsCallback)
         .def("update", &Nuitrack::update)
-        .def("test", &Nuitrack::test)
     ;
 };
