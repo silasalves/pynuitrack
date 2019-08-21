@@ -306,7 +306,7 @@ public:
 
     bp::api::object _extractHandData(nt::Hand::Ptr hand)
     {
-        if (hand)
+        if (hand && hand->x != -1)
         {
             float fProj[] = {hand->x * _outputModeColor.xres,
                              hand->y * _outputModeColor.yres};
