@@ -3,11 +3,12 @@ cmake_minimum_required(VERSION 2.8.3)
 add_definitions(-std=c++11)
 
 # REQUIRED
-set(NUITRACK_SDK_PATH /home/silas/workspace/NuitrackSDK)
+set(NUITRACK_SDK_PATH add_nuitrack_sdk_path_here)
 
-# OPTIONAL
-set(BOOST_INCLUDE_PATH /home/silas/workspace/boost_1_70_0)
-set(BOOST_STAGE_PATH /home/silas/workspace/boost_1_70_0/stage/lib)
+## OPTIONAL: uncomment these variables and change them in case you are using
+## a custom installation of Boost.
+# set(BOOST_INCLUDE_PATH add_boost_include_dir_here)
+# set(BOOST_STAGE_PATH add_boost_stage_dir_here)
 
 if(UNIX)
 	IF (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
