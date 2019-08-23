@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 2.8.3)
 
 add_definitions(-std=c++11)
 
+# REQUIRED
 set(NUITRACK_SDK_PATH /home/silas/workspace/NuitrackSDK)
+
+# OPTIONAL
+set(BOOST_INCLUDE_PATH /home/silas/workspace/boost_1_70_0)
+set(BOOST_STAGE_PATH /home/silas/workspace/boost_1_70_0/stage/lib)
 
 if(UNIX)
 	IF (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
@@ -20,41 +25,27 @@ endif()
 
 FIND_PACKAGE(PythonInterp)
 
-if (PYTHONINTERP_FOUND)
-  if (UNIX AND NOT APPLE)
-    if (PYTHON_VERSION_MAJOR EQUAL 3)
-        FIND_PACKAGE(Boost COMPONENTS python${PYTHON_VERSION_SUFFIX})
-        FIND_PACKAGE(PythonInterp 3)
-        FIND_PACKAGE(PythonLibs 3 REQUIRED)
-    else()
-        FIND_PACKAGE(Boost COMPONENTS python)
-        FIND_PACKAGE(PythonInterp)
-        FIND_PACKAGE(PythonLibs REQUIRED)
-    endif()
-  else()	
-    if (PYTHON_VERSION_MAJOR EQUAL 3)
-        FIND_PACKAGE(Boost COMPONENTS python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR})
-        FIND_PACKAGE(PythonInterp 3)
-        FIND_PACKAGE(PythonLibs 3 REQUIRED)
-    else()
-        FIND_PACKAGE(Boost COMPONENTS python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR})
-        FIND_PACKAGE(PythonInterp)
-        FIND_PACKAGE(PythonLibs REQUIRED)
-    endif()
-  endif()
+if(BOOST_INCLUDE_PATH AND BOOST_STAGE_PATH)
+  message(STATUS "Using custom Boost C++ library.")
+  set(Boost_LIBRARIES
+    ${BOOST_STAGE_PATH}/libboost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}.so
+    ${BOOST_STAGE_PATH}/libboost_numpy${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}.so
+  )
+  set(Boost_INCLUDE_DIRS ${BOOST_INCLUDE_PATH})
 else()
-    message("Python not found")
+  FIND_PACKAGE(Boost COMPONENTS python numpy REQUIRED)
 endif()
+FIND_PACKAGE(PythonInterp ${PYTHON_VERSION_MAJOR} REQUIRED)
+FIND_PACKAGE(PythonLibs ${PYTHON_VERSION_MAJOR} REQUIRED)
 
 message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
 message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
 message(STATUS "PYTHON_INCLUDE_DIRS = ${PYTHON_INCLUDE_DIRS}")
+message(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
 
-#ENABLE_TESTING()
 INCLUDE_DIRECTORIES(
-  # ${Boost_INCLUDE_DIRS}
-  /home/silas/workspace/boost_1_70_0/
+  ${Boost_INCLUDE_DIRS}
   ${PYTHON_INCLUDE_DIRS}
   ${NUITRACK_SDK_PATH}/Nuitrack/include
   ${NUITRACK_SDK_PATH}/Nuitrack/include/middleware
@@ -65,11 +56,9 @@ link_directories(
 )
 
 LINK_LIBRARIES(
-  # ${Boost_LIBRARIES}
-  /home/silas/workspace/boost_1_70_0/stage/lib/libboost_python27.so
-  /home/silas/workspace/boost_1_70_0/stage/lib/libboost_numpy27.so
+  ${Boost_LIBRARIES}
   ${PYTHON_LIBRARIES}
   nuitrack
-) # Deprecated but so convenient!
+)
 
 PYTHON_ADD_MODULE(pynuitrack src/pynuitrack.cpp)
