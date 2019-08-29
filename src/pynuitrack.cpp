@@ -134,9 +134,8 @@ public:
         _handTracker = tdv::nuitrack::HandTracker::create();
         _handTracker->connectOnUpdate(std::bind(&Nuitrack::onHandUpdate, this, std::placeholders::_1));
 
-        // _userTracker = UserTracker::create();
-        // // Bind to event update user tracker
-        // _userTracker->connectOnUpdate(std::bind(&NuitrackGLSample::onUserUpdate, this, std::placeholders::_1));
+        _userTracker = nt::UserTracker::create();
+        _userTracker->connectOnUpdate(std::bind(&Nuitrack::onUserUpdate, this, std::placeholders::_1));
 
         _skeletonTracker = tdv::nuitrack::SkeletonTracker::create();
         _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
@@ -197,6 +196,28 @@ public:
     void setHandsCallback(PyObject* callable)
     {
         _pyHandsCallback = callable;
+    }
+
+    void setUserCallback(PyObject* callable)
+    {
+        _pyUserCallback = callable;
+    }
+
+    void onUserUpdate(nt::UserFrame::Ptr frame)
+    {
+        if (_pyUserCallback != NULL)
+        {
+            const uint16_t* depthPtr = frame->getData();
+            int nCols = frame->getCols();
+	        int nRows = frame->getRows();
+
+            np::ndarray npData = np::from_data(depthPtr, _dtUInt16,
+                                            bp::make_tuple(nRows, nCols),
+                                            bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
+                                            bp::object());
+
+            boost::python::call<void>(_pyUserCallback, npData.copy());
+        }
     }
 
     bp::api::object _extractJointData(tdv::nuitrack::Joint joint)
@@ -385,6 +406,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_color_callback", &Nuitrack::setColorCallback)
         .def("set_skeleton_callback", &Nuitrack::setSkeletonCallback)
         .def("set_hands_callback", &Nuitrack::setHandsCallback)
+        .def("set_user_callback", &Nuitrack::setUserCallback)
         .def("update", &Nuitrack::update)
     ;
 };
