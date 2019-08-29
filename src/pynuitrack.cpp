@@ -66,6 +66,7 @@ private:
     PyObject* _pySkeletonCallback;
     PyObject* _pyHandsCallback;
     PyObject* _pyUserCallback;
+    PyObject* _pyGestureCallback;
 
     np::dtype _dtUInt8 = np::dtype::get_builtin<uint8_t>();
     np::dtype _dtUInt16 = np::dtype::get_builtin<uint16_t>();
@@ -76,6 +77,7 @@ private:
     bp::api::object _Joint;
     bp::api::object _Hand;
     bp::api::object _UserHands;
+    bp::api::object _Gesture;
 
 public:
     Nuitrack()
@@ -85,6 +87,7 @@ public:
         _pySkeletonCallback = NULL;
         _pyHandsCallback = NULL;
         _pyUserCallback = NULL;
+        _pyGestureCallback = NULL;
 
         _collections = bp::import("collections");
         _namedtuple = _collections.attr("namedtuple");
@@ -109,6 +112,11 @@ public:
         fieldsHand.append("proj");
         fieldsHand.append("real");
         _Hand = _namedtuple("Hand", fieldsHand);
+
+        bp::list fieldsGesture;
+        fieldsGesture.append("userID");
+        fieldsGesture.append("type");
+        _Gesture = _namedtuple("Gesture", fieldsGesture);
     }
 
     void init(std::string configPath = "")
@@ -140,8 +148,8 @@ public:
         _skeletonTracker = tdv::nuitrack::SkeletonTracker::create();
         _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
 
-        // _gestureRecognizer = GestureRecognizer::create();
-        // _gestureRecognizer->connectOnNewGestures(std::bind(&NuitrackGLSample::onNewGesture, this, std::placeholders::_1));
+        _gestureRecognizer = nt::GestureRecognizer::create();
+        _gestureRecognizer->connectOnNewGestures(std::bind(&Nuitrack::onNewGesture, this, std::placeholders::_1));
 
         // _onIssuesUpdateHandler = Nuitrack::connectOnIssuesUpdate(std::bind(&NuitrackGLSample::onIssuesUpdate,
         //                                                                   this, std::placeholders::_1));
@@ -201,6 +209,25 @@ public:
     void setUserCallback(PyObject* callable)
     {
         _pyUserCallback = callable;
+    }
+
+    void setGestureCallback(PyObject* callable)
+    {
+        _pyGestureCallback = callable;
+    }
+
+    void onNewGesture(nt::GestureData::Ptr gestureData)
+    {
+        if (_pyGestureCallback)
+        {
+            auto gestures = gestureData->getGestures();
+            bp::list listGest;
+            for(nt::Gesture gest : gestures)
+            {
+                listGest.append(_Gesture(gest.userId, (int)gest.type));
+            }
+            boost::python::call<void>(_pyGestureCallback, listGest);
+        }
     }
 
     void onUserUpdate(nt::UserFrame::Ptr frame)
@@ -407,6 +434,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_skeleton_callback", &Nuitrack::setSkeletonCallback)
         .def("set_hands_callback", &Nuitrack::setHandsCallback)
         .def("set_user_callback", &Nuitrack::setUserCallback)
+        .def("set_gesture_callback", &Nuitrack::setGestureCallback)
         .def("update", &Nuitrack::update)
     ;
 };

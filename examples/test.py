@@ -31,17 +31,20 @@ def handsCallback(data):
 
 def userCallback(data):
     cv2.imshow('User', data*2**8 + 2**8)
-    print np.unique(data)
     cv2.waitKey(1)
+
+def gestureCallback(data):
+    print data
 
 a = Nuitrack()
 # print a.test()
 
 a.set_depth_callback(depthCallback)
 a.set_color_callback(colorCallback)
-a.set_skeleton_callback(skelCallback)
-a.set_hands_callback(handsCallback)
+# a.set_skeleton_callback(skelCallback)
+# a.set_hands_callback(handsCallback)
 a.set_user_callback(userCallback)
+a.set_gesture_callback(gestureCallback)
 
 a.init()
 
