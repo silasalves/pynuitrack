@@ -59,14 +59,15 @@ private:
 	tdv::nuitrack::SkeletonTracker::Ptr _skeletonTracker;
 	tdv::nuitrack::HandTracker::Ptr _handTracker;
 	tdv::nuitrack::GestureRecognizer::Ptr _gestureRecognizer;
-	tdv::nuitrack::IssuesData::Ptr _issuesData;
-
+	uint64_t _onIssuesUpdateHandler;
+    
     PyObject* _pyDepthCallback;
     PyObject* _pyColorCallback;
     PyObject* _pySkeletonCallback;
     PyObject* _pyHandsCallback;
     PyObject* _pyUserCallback;
     PyObject* _pyGestureCallback;
+    PyObject* _pyIssueCallback;
 
     np::dtype _dtUInt8 = np::dtype::get_builtin<uint8_t>();
     np::dtype _dtUInt16 = np::dtype::get_builtin<uint16_t>();
@@ -78,6 +79,8 @@ private:
     bp::api::object _Hand;
     bp::api::object _UserHands;
     bp::api::object _Gesture;
+    bp::api::object _FrameBorderIssue;
+    bp::api::object _OcclusionIssue;
 
 public:
     Nuitrack()
@@ -88,6 +91,7 @@ public:
         _pyHandsCallback = NULL;
         _pyUserCallback = NULL;
         _pyGestureCallback = NULL;
+        _pyIssueCallback = NULL;
 
         _collections = bp::import("collections");
         _namedtuple = _collections.attr("namedtuple");
@@ -101,7 +105,7 @@ public:
         _Joint = _namedtuple("Joint", fieldsJoint);
 
         bp::list fieldsUserHands;
-        fieldsUserHands.append("userID");
+        fieldsUserHands.append("userId");
         fieldsUserHands.append("left");
         fieldsUserHands.append("right");
         _UserHands = _namedtuple("UserHands", fieldsUserHands);
@@ -114,9 +118,20 @@ public:
         _Hand = _namedtuple("Hand", fieldsHand);
 
         bp::list fieldsGesture;
-        fieldsGesture.append("userID");
+        fieldsGesture.append("userId");
         fieldsGesture.append("type");
         _Gesture = _namedtuple("Gesture", fieldsGesture);
+
+        bp::list fieldsFBIssue;
+        fieldsFBIssue.append("userId");
+        fieldsFBIssue.append("left");
+        fieldsFBIssue.append("right");
+        fieldsFBIssue.append("top");
+        _FrameBorderIssue = _namedtuple("FrameBorderIssue", fieldsFBIssue);
+
+        bp::list fieldsOIssue;
+        fieldsOIssue.append("userId");
+        _OcclusionIssue = _namedtuple("OcclusionIssue", fieldsOIssue);
     }
 
     void init(std::string configPath = "")
@@ -151,8 +166,8 @@ public:
         _gestureRecognizer = nt::GestureRecognizer::create();
         _gestureRecognizer->connectOnNewGestures(std::bind(&Nuitrack::onNewGesture, this, std::placeholders::_1));
 
-        // _onIssuesUpdateHandler = Nuitrack::connectOnIssuesUpdate(std::bind(&NuitrackGLSample::onIssuesUpdate,
-        //                                                                   this, std::placeholders::_1));
+        _onIssuesUpdateHandler = nt::Nuitrack::connectOnIssuesUpdate(std::bind(&Nuitrack::onIssuesUpdate,
+                                                                          this, std::placeholders::_1));
 
 
         // Start Nuitrack
@@ -214,6 +229,32 @@ public:
     void setGestureCallback(PyObject* callable)
     {
         _pyGestureCallback = callable;
+    }
+
+    void setIssueCallback(PyObject* callable)
+    {
+        _pyIssueCallback = callable;
+    }
+
+    void onIssuesUpdate(nt::IssuesData::Ptr issuesData)
+    {
+        if(_pyIssueCallback && issuesData)
+        {
+            bp::list listIssues;
+            for (int userId = 0; userId < 8; userId++)
+            {
+                auto issueFB = issuesData->getUserIssue<nt::FrameBorderIssue>(userId);
+                if(issueFB)
+                    listIssues.append(_FrameBorderIssue(userId, issueFB->isLeft(),issueFB->isRight(), issueFB->isTop()));
+                
+                auto issueOcc = issuesData->getUserIssue<nt::OcclusionIssue>(userId);
+                if(issueOcc)
+                    listIssues.append(_OcclusionIssue(userId));
+            }
+
+            if(bp::len(listIssues))
+                boost::python::call<void>(_pyIssueCallback, listIssues);
+        }
     }
 
     void onNewGesture(nt::GestureData::Ptr gestureData)
@@ -435,6 +476,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_hands_callback", &Nuitrack::setHandsCallback)
         .def("set_user_callback", &Nuitrack::setUserCallback)
         .def("set_gesture_callback", &Nuitrack::setGestureCallback)
+        .def("set_issue_callback", &Nuitrack::setIssueCallback)
         .def("update", &Nuitrack::update)
     ;
 };

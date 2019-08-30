@@ -43,8 +43,9 @@ a.set_depth_callback(depthCallback)
 a.set_color_callback(colorCallback)
 # a.set_skeleton_callback(skelCallback)
 # a.set_hands_callback(handsCallback)
-a.set_user_callback(userCallback)
+# a.set_user_callback(userCallback)
 a.set_gesture_callback(gestureCallback)
+a.set_issue_callback(gestureCallback)
 
 a.init()
 
@@ -62,3 +63,5 @@ a.release()
 print "the end"
 
 cv2.destroyAllWindows()
+
+print "done"
