@@ -1,5 +1,8 @@
 # pynuitrack
-**pynuitrak** is a python wrapper for Nuitrack skeleton tracking library.
+
+**pynuitrak** is a simple Python wrapper for Nuitrack skeleton tracking library.
+It is intended to be an easy-to-use interface for the Nuitrack library, and thus
+do not necessarily implements the very same classes as the Nuitrack C++ SDK.
 
 > **Important:** Although this wrapper is free software, Nuitrack _is not_.
 > You can acquire a _trial_ or _pro_ license at
