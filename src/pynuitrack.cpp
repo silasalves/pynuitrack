@@ -392,8 +392,6 @@ void Nuitrack::release()
     nt::Nuitrack::release();
 }
 
-using namespace bp;
-
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(nt_init_overloads, Nuitrack::init, 0, 1)
 
 BOOST_PYTHON_MODULE(pynuitrack)
@@ -401,10 +399,10 @@ BOOST_PYTHON_MODULE(pynuitrack)
     Py_Initialize();
     np::initialize();
 
-    register_exception_translator<NuitrackException>(&translateException);
-    register_exception_translator<NuitrackInitFail>(&translateException);
+    bp::register_exception_translator<NuitrackException>(&translateException);
+    bp::register_exception_translator<NuitrackInitFail>(&translateException);
 
-    enum_<nt::GestureType>("GestureType")
+    bp::enum_<nt::GestureType>("GestureType")
         .value("waving", nt::GESTURE_WAVING)
         .value("swipe_left", nt::GESTURE_SWIPE_LEFT)
         .value("swipe_right", nt::GESTURE_SWIPE_RIGHT)
@@ -413,7 +411,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .value("push", nt::GESTURE_PUSH)
         .export_values();
     
-    enum_<nt::JointType>("JointType")
+    bp::enum_<nt::JointType>("JointType")
         .value("none", nt::JOINT_NONE)
         .value("head", nt::JOINT_HEAD)
         .value("neck", nt::JOINT_NECK)
@@ -441,7 +439,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .value("right_foot", nt::JOINT_RIGHT_FOOT)
         .export_values();	
 
-    class_<Nuitrack>("Nuitrack", bp::init<>())
+    bp::class_<Nuitrack>("Nuitrack", bp::init<>())
         .def("init", &Nuitrack::init, nt_init_overloads(
             bp::arg("configPath")="", 
             "Path to the configuration file"
