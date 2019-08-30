@@ -455,8 +455,6 @@ public:
 
 using namespace bp;
 
-enum test {a = 1, b = 2, c = 3};
-
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(nt_init_overloads, Nuitrack::init, 0, 1)
 
 BOOST_PYTHON_MODULE(pynuitrack)
