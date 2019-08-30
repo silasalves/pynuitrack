@@ -1,20 +1,7 @@
 #include "pynuitrack.hpp"
-
 #include <boost/python.hpp>
-#include <boost/python/list.hpp>
-#include <boost/python/extract.hpp>
-#include <boost/python/module.hpp>
-#include <boost/python/def.hpp>
-#include <boost/python/exception_translator.hpp>
 #include <boost/python/numpy.hpp>
-#include <boost/python/enum.hpp>
-
-#include <string>
-#include <sstream>
-#include <vector>
-
 #include <nuitrack/Nuitrack.h>
-#include <iomanip>
 
 namespace nt = tdv::nuitrack;
 namespace bp = boost::python;
