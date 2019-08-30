@@ -88,26 +88,26 @@ void Nuitrack::init(std::string configPath)
     }
 
     _depthSensor = nt::DepthSensor::create();
-    _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewDepthFrame, this, std::placeholders::_1));
+    _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::_onNewDepthFrame, this, std::placeholders::_1));
     _outputModeDepth = _depthSensor->getOutputMode();
 
     _colorSensor = nt::ColorSensor::create();
-    _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewRGBFrame, this, std::placeholders::_1));
+    _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::_onNewRGBFrame, this, std::placeholders::_1));
     _outputModeColor = _colorSensor->getOutputMode();
 
     _handTracker = nt::HandTracker::create();
-    _handTracker->connectOnUpdate(std::bind(&Nuitrack::onHandUpdate, this, std::placeholders::_1));
+    _handTracker->connectOnUpdate(std::bind(&Nuitrack::_onHandUpdate, this, std::placeholders::_1));
 
     _userTracker = nt::UserTracker::create();
-    _userTracker->connectOnUpdate(std::bind(&Nuitrack::onUserUpdate, this, std::placeholders::_1));
+    _userTracker->connectOnUpdate(std::bind(&Nuitrack::_onUserUpdate, this, std::placeholders::_1));
 
     _skeletonTracker = nt::SkeletonTracker::create();
-    _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
+    _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::_onSkeletonUpdate, this, std::placeholders::_1));
 
     _gestureRecognizer = nt::GestureRecognizer::create();
-    _gestureRecognizer->connectOnNewGestures(std::bind(&Nuitrack::onNewGesture, this, std::placeholders::_1));
+    _gestureRecognizer->connectOnNewGestures(std::bind(&Nuitrack::_onNewGesture, this, std::placeholders::_1));
 
-    _onIssuesUpdateHandler = nt::Nuitrack::connectOnIssuesUpdate(std::bind(&Nuitrack::onIssuesUpdate,
+    _onIssuesUpdateHandler = nt::Nuitrack::connectOnIssuesUpdate(std::bind(&Nuitrack::_onIssuesUpdate,
                                                                         this, std::placeholders::_1));
 
 
@@ -177,7 +177,7 @@ void Nuitrack::setIssueCallback(PyObject* callable)
     _pyIssueCallback = callable;
 }
 
-void Nuitrack::onIssuesUpdate(nt::IssuesData::Ptr issuesData)
+void Nuitrack::_onIssuesUpdate(nt::IssuesData::Ptr issuesData)
 {
     if(_pyIssueCallback && issuesData)
     {
@@ -198,7 +198,7 @@ void Nuitrack::onIssuesUpdate(nt::IssuesData::Ptr issuesData)
     }
 }
 
-void Nuitrack::onNewGesture(nt::GestureData::Ptr gestureData)
+void Nuitrack::_onNewGesture(nt::GestureData::Ptr gestureData)
 {
     if (_pyGestureCallback)
     {
@@ -212,7 +212,7 @@ void Nuitrack::onNewGesture(nt::GestureData::Ptr gestureData)
     }
 }
 
-void Nuitrack::onUserUpdate(nt::UserFrame::Ptr frame)
+void Nuitrack::_onUserUpdate(nt::UserFrame::Ptr frame)
 {
     if (_pyUserCallback != NULL)
     {
@@ -259,7 +259,7 @@ bp::api::object Nuitrack::_extractJointData(nt::Joint joint)
                     orientation.copy());
 }
 
-void Nuitrack::onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
+void Nuitrack::_onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
 {
     if (_pySkeletonCallback)
     {
@@ -301,7 +301,7 @@ void Nuitrack::onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
 }
 
 
-void Nuitrack::onNewDepthFrame(nt::DepthFrame::Ptr frame)
+void Nuitrack::_onNewDepthFrame(nt::DepthFrame::Ptr frame)
 {
     if (_pyDepthCallback != NULL)
     {
@@ -318,7 +318,7 @@ void Nuitrack::onNewDepthFrame(nt::DepthFrame::Ptr frame)
     }
 }
 
-void Nuitrack::onNewRGBFrame(nt::RGBFrame::Ptr frame)
+void Nuitrack::_onNewRGBFrame(nt::RGBFrame::Ptr frame)
 {
     if (_pyColorCallback != NULL)
     {
@@ -361,7 +361,7 @@ bp::api::object Nuitrack::_extractHandData(nt::Hand::Ptr hand)
 }
 
 // Callback for the hand data update event
-void Nuitrack::onHandUpdate(nt::HandTrackerData::Ptr handData)
+void Nuitrack::_onHandUpdate(nt::HandTrackerData::Ptr handData)
 {
     if (_pyHandsCallback && handData)
     {
