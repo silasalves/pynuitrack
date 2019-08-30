@@ -52,14 +52,14 @@ void translateException(NuitrackException const& e)
 class Nuitrack
 {
 private:
-    tdv::nuitrack::OutputMode _outputModeDepth;
-    tdv::nuitrack::OutputMode _outputModeColor;
-	tdv::nuitrack::DepthSensor::Ptr _depthSensor;
-	tdv::nuitrack::ColorSensor::Ptr _colorSensor;
-	tdv::nuitrack::UserTracker::Ptr _userTracker;
-	tdv::nuitrack::SkeletonTracker::Ptr _skeletonTracker;
-	tdv::nuitrack::HandTracker::Ptr _handTracker;
-	tdv::nuitrack::GestureRecognizer::Ptr _gestureRecognizer;
+    nt::OutputMode _outputModeDepth;
+    nt::OutputMode _outputModeColor;
+	nt::DepthSensor::Ptr _depthSensor;
+	nt::ColorSensor::Ptr _colorSensor;
+	nt::UserTracker::Ptr _userTracker;
+	nt::SkeletonTracker::Ptr _skeletonTracker;
+	nt::HandTracker::Ptr _handTracker;
+	nt::GestureRecognizer::Ptr _gestureRecognizer;
 	uint64_t _onIssuesUpdateHandler;
     
     PyObject* _pyDepthCallback;
@@ -140,28 +140,28 @@ public:
         // Initialize Nuitrack
         try
         {
-            tdv::nuitrack::Nuitrack::init(configPath);
+            nt::Nuitrack::init(configPath);
         }
-        catch (const tdv::nuitrack::Exception& e)
+        catch (const nt::Exception& e)
         {
             throw NuitrackException("Could not initialize Nuitrack");
         }
 
-        _depthSensor = tdv::nuitrack::DepthSensor::create();
+        _depthSensor = nt::DepthSensor::create();
         _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewDepthFrame, this, std::placeholders::_1));
         _outputModeDepth = _depthSensor->getOutputMode();
 
-        _colorSensor = tdv::nuitrack::ColorSensor::create();
+        _colorSensor = nt::ColorSensor::create();
         _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::onNewRGBFrame, this, std::placeholders::_1));
         _outputModeColor = _colorSensor->getOutputMode();
 
-        _handTracker = tdv::nuitrack::HandTracker::create();
+        _handTracker = nt::HandTracker::create();
         _handTracker->connectOnUpdate(std::bind(&Nuitrack::onHandUpdate, this, std::placeholders::_1));
 
         _userTracker = nt::UserTracker::create();
         _userTracker->connectOnUpdate(std::bind(&Nuitrack::onUserUpdate, this, std::placeholders::_1));
 
-        _skeletonTracker = tdv::nuitrack::SkeletonTracker::create();
+        _skeletonTracker = nt::SkeletonTracker::create();
         _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::onSkeletonUpdate, this, std::placeholders::_1));
 
         _gestureRecognizer = nt::GestureRecognizer::create();
@@ -174,9 +174,9 @@ public:
         // Start Nuitrack
         try
         {
-            tdv::nuitrack::Nuitrack::run();
+            nt::Nuitrack::run();
         }
-        catch (const tdv::nuitrack::Exception& e)
+        catch (const nt::Exception& e)
         {
             std::string msg("Nuitrack update failed: ");
             msg += exceptionType_str[e.type()];
@@ -188,13 +188,13 @@ public:
     {
         try
         {
-            tdv::nuitrack::Nuitrack::waitUpdate(_skeletonTracker);
+            nt::Nuitrack::waitUpdate(_skeletonTracker);
         }
-        catch (tdv::nuitrack::LicenseNotAcquiredException& e)
+        catch (nt::LicenseNotAcquiredException& e)
         {
             throw NuitrackException("License not acquired.");
         }
-        catch (const tdv::nuitrack::Exception& e)
+        catch (const nt::Exception& e)
         {
             std::string msg("Nuitrack update failed: ");
             msg += exceptionType_str[e.type()];
@@ -254,7 +254,7 @@ public:
             }
 
             if(bp::len(listIssues))
-                boost::python::call<void>(_pyIssueCallback, listIssues);
+                bp::call<void>(_pyIssueCallback, listIssues);
         }
     }
 
@@ -268,7 +268,7 @@ public:
             {
                 listGest.append(_Gesture(gest.userId, gest.type));
             }
-            boost::python::call<void>(_pyGestureCallback, listGest);
+            bp::call<void>(_pyGestureCallback, listGest);
         }
     }
 
@@ -285,11 +285,11 @@ public:
                                             bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
                                             bp::object());
 
-            boost::python::call<void>(_pyUserCallback, npData.copy());
+            bp::call<void>(_pyUserCallback, npData.copy());
         }
     }
 
-    bp::api::object _extractJointData(tdv::nuitrack::Joint joint)
+    bp::api::object _extractJointData(nt::Joint joint)
     {
         float fReal[] = {joint.real.x, joint.real.y, joint.real.z};
         
@@ -319,13 +319,13 @@ public:
                       orientation.copy());
     }
 
-    void onSkeletonUpdate(tdv::nuitrack::SkeletonData::Ptr userSkeletons)
+    void onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
     {
         if (_pySkeletonCallback)
         {
             bp::list listSkel;
             auto skeletons = userSkeletons->getSkeletons();
-            for (tdv::nuitrack::Skeleton skeleton: skeletons)
+            for (nt::Skeleton skeleton: skeletons)
             {
                 bp::list listJoint;
                 listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_HEAD]));
@@ -356,12 +356,12 @@ public:
                 userSkeletons->getNumSkeletons(),
                 listSkel);
             
-            boost::python::call<void>(_pySkeletonCallback, data);
+            bp::call<void>(_pySkeletonCallback, data);
         }
     }
 
 
-    void onNewDepthFrame(tdv::nuitrack::DepthFrame::Ptr frame)
+    void onNewDepthFrame(nt::DepthFrame::Ptr frame)
     {
         if (_pyDepthCallback != NULL)
         {
@@ -374,11 +374,11 @@ public:
                                             bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
                                             bp::object());
 
-            boost::python::call<void>(_pyDepthCallback, npData.copy());
+            bp::call<void>(_pyDepthCallback, npData.copy());
         }
     }
 
-    void onNewRGBFrame(tdv::nuitrack::RGBFrame::Ptr frame)
+    void onNewRGBFrame(nt::RGBFrame::Ptr frame)
     {
         if (_pyColorCallback != NULL)
         {
@@ -391,7 +391,7 @@ public:
                                             bp::make_tuple(nCols * 3 * sizeof(uint8_t), 3 * sizeof(uint8_t), sizeof(uint8_t)),
                                             bp::object());
 
-            boost::python::call<void>(_pyColorCallback, npData.copy());
+            bp::call<void>(_pyColorCallback, npData.copy());
         }
     }
 
@@ -449,11 +449,11 @@ public:
 
     void release()
     {
-        tdv::nuitrack::Nuitrack::release();
+        nt::Nuitrack::release();
     }
 };
 
-using namespace boost::python;
+using namespace bp;
 
 enum test {a = 1, b = 2, c = 3};
 
@@ -504,9 +504,9 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .value("right_foot", nt::JOINT_RIGHT_FOOT)
         .export_values();	
 
-    class_<Nuitrack>("Nuitrack", boost::python::init<>())
+    class_<Nuitrack>("Nuitrack", bp::init<>())
         .def("init", &Nuitrack::init, nt_init_overloads(
-            boost::python::arg("configPath")="", 
+            bp::arg("configPath")="", 
             "Path to the configuration file"
         ))
         .def("release", &Nuitrack::release)
