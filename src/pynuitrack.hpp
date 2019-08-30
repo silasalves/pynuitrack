@@ -5,21 +5,17 @@
 #include <boost/python/numpy.hpp>
 #include <nuitrack/Nuitrack.h>
 
-namespace nt = tdv::nuitrack;
-namespace bp = boost::python;
-namespace np = boost::python::numpy;
-
 class Nuitrack
 {
 private:
-  nt::OutputMode _outputModeDepth;
-  nt::OutputMode _outputModeColor;
-	nt::DepthSensor::Ptr _depthSensor;
-	nt::ColorSensor::Ptr _colorSensor;
-	nt::UserTracker::Ptr _userTracker;
-	nt::SkeletonTracker::Ptr _skeletonTracker;
-	nt::HandTracker::Ptr _handTracker;
-	nt::GestureRecognizer::Ptr _gestureRecognizer;
+  tdv::nuitrack::OutputMode _outputModeDepth;
+  tdv::nuitrack::OutputMode _outputModeColor;
+	tdv::nuitrack::DepthSensor::Ptr _depthSensor;
+	tdv::nuitrack::ColorSensor::Ptr _colorSensor;
+	tdv::nuitrack::UserTracker::Ptr _userTracker;
+	tdv::nuitrack::SkeletonTracker::Ptr _skeletonTracker;
+	tdv::nuitrack::HandTracker::Ptr _handTracker;
+	tdv::nuitrack::GestureRecognizer::Ptr _gestureRecognizer;
 	uint64_t _onIssuesUpdateHandler;
     
   PyObject* _pyDepthCallback;
@@ -30,18 +26,18 @@ private:
   PyObject* _pyGestureCallback;
   PyObject* _pyIssueCallback;
 
-  np::dtype _dtUInt8 = np::dtype::get_builtin<uint8_t>();
-  np::dtype _dtUInt16 = np::dtype::get_builtin<uint16_t>();
-  np::dtype _dtFloat = np::dtype::get_builtin<float>();
+  boost::python::numpy::dtype _dtUInt8 = boost::python::numpy::dtype::get_builtin<uint8_t>();
+  boost::python::numpy::dtype _dtUInt16 = boost::python::numpy::dtype::get_builtin<uint16_t>();
+  boost::python::numpy::dtype _dtFloat = boost::python::numpy::dtype::get_builtin<float>();
 
-  bp::api::object _collections;
-  bp::api::object _namedtuple;
-  bp::api::object _Joint;
-  bp::api::object _Hand;
-  bp::api::object _UserHands;
-  bp::api::object _Gesture;
-  bp::api::object _FrameBorderIssue;
-  bp::api::object _OcclusionIssue;
+  boost::python::api::object _collections;
+  boost::python::api::object _namedtuple;
+  boost::python::api::object _Joint;
+  boost::python::api::object _Hand;
+  boost::python::api::object _UserHands;
+  boost::python::api::object _Gesture;
+  boost::python::api::object _FrameBorderIssue;
+  boost::python::api::object _OcclusionIssue;
 
 public:
     Nuitrack();
@@ -64,23 +60,23 @@ public:
 
     void setIssueCallback(PyObject* callable);
 
-    void onIssuesUpdate(nt::IssuesData::Ptr issuesData);
+    void onIssuesUpdate(tdv::nuitrack::IssuesData::Ptr issuesData);
 
-    void onNewGesture(nt::GestureData::Ptr gestureData);
+    void onNewGesture(tdv::nuitrack::GestureData::Ptr gestureData);
 
-    void onUserUpdate(nt::UserFrame::Ptr frame);
+    void onUserUpdate(tdv::nuitrack::UserFrame::Ptr frame);
 
-    bp::api::object _extractJointData(nt::Joint joint);
+    boost::python::api::object _extractJointData(tdv::nuitrack::Joint joint);
 
-    void onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons);
+    void onSkeletonUpdate(tdv::nuitrack::SkeletonData::Ptr userSkeletons);
 
-    void onNewDepthFrame(nt::DepthFrame::Ptr frame);
+    void onNewDepthFrame(tdv::nuitrack::DepthFrame::Ptr frame);
 
-    void onNewRGBFrame(nt::RGBFrame::Ptr frame);
+    void onNewRGBFrame(tdv::nuitrack::RGBFrame::Ptr frame);
 
-    bp::api::object _extractHandData(nt::Hand::Ptr hand);
+    boost::python::api::object _extractHandData(tdv::nuitrack::Hand::Ptr hand);
 
-    void onHandUpdate(nt::HandTrackerData::Ptr handData);
+    void onHandUpdate(tdv::nuitrack::HandTrackerData::Ptr handData);
 
     void release();
 };
