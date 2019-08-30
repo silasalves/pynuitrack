@@ -7,6 +7,7 @@
 #include <boost/python/def.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/numpy.hpp>
+#include <boost/python/enum.hpp>
 
 #include <string>
 #include <sstream>
@@ -265,7 +266,7 @@ public:
             bp::list listGest;
             for(nt::Gesture gest : gestures)
             {
-                listGest.append(_Gesture(gest.userId, (int)gest.type));
+                listGest.append(_Gesture(gest.userId, gest.type));
             }
             boost::python::call<void>(_pyGestureCallback, listGest);
         }
@@ -311,7 +312,7 @@ public:
                                         bp::make_tuple(3 * sizeof(float), sizeof(float)),
                                         bp::object());
 
-        return _Joint((int)joint.type,
+        return _Joint(joint.type,
                       joint.confidence, 
                       real.copy(),
                       proj.copy(),
@@ -454,6 +455,8 @@ public:
 
 using namespace boost::python;
 
+enum test {a = 1, b = 2, c = 3};
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(nt_init_overloads, Nuitrack::init, 0, 1)
 
 BOOST_PYTHON_MODULE(pynuitrack)
@@ -463,6 +466,43 @@ BOOST_PYTHON_MODULE(pynuitrack)
 
     register_exception_translator<NuitrackException>(&translateException);
     register_exception_translator<NuitrackInitFail>(&translateException);
+
+    enum_<nt::GestureType>("GestureType")
+        .value("waving", nt::GESTURE_WAVING)
+        .value("swipe_left", nt::GESTURE_SWIPE_LEFT)
+        .value("swipe_right", nt::GESTURE_SWIPE_RIGHT)
+        .value("swipe_up", nt::GESTURE_SWIPE_UP)
+        .value("swipe_down", nt::GESTURE_SWIPE_DOWN)
+        .value("push", nt::GESTURE_PUSH)
+        .export_values();
+    
+    enum_<nt::JointType>("JointType")
+        .value("none", nt::JOINT_NONE)
+        .value("head", nt::JOINT_HEAD)
+        .value("neck", nt::JOINT_NECK)
+        .value("torso", nt::JOINT_TORSO)
+        .value("waist", nt::JOINT_WAIST)
+        .value("left_collar", nt::JOINT_LEFT_COLLAR)
+        .value("left_shoulder", nt::JOINT_LEFT_SHOULDER)
+        .value("left_elbow", nt::JOINT_LEFT_ELBOW)
+        .value("left_wrist", nt::JOINT_LEFT_WRIST)
+        .value("left_hand", nt::JOINT_LEFT_HAND)
+        .value("left_fingertip", nt::JOINT_LEFT_FINGERTIP)
+        .value("right_collar", nt::JOINT_RIGHT_COLLAR)
+        .value("right_shoulder", nt::JOINT_RIGHT_SHOULDER)
+        .value("right_elbow", nt::JOINT_RIGHT_ELBOW)
+        .value("right_wrist", nt::JOINT_RIGHT_WRIST)
+        .value("right_hand", nt::JOINT_RIGHT_HAND)
+        .value("right_fingertip", nt::JOINT_RIGHT_FINGERTIP)
+        .value("left_hip", nt::JOINT_LEFT_HIP)
+        .value("left_knee", nt::JOINT_LEFT_KNEE)
+        .value("left_ankle", nt::JOINT_LEFT_ANKLE)
+        .value("left_foot", nt::JOINT_LEFT_FOOT)
+        .value("right_hip", nt::JOINT_RIGHT_HIP)
+        .value("right_knee", nt::JOINT_RIGHT_KNEE)
+        .value("right_ankle", nt::JOINT_RIGHT_ANKLE)
+        .value("right_foot", nt::JOINT_RIGHT_FOOT)
+        .export_values();	
 
     class_<Nuitrack>("Nuitrack", boost::python::init<>())
         .def("init", &Nuitrack::init, nt_init_overloads(
