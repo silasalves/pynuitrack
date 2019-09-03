@@ -1,9 +1,40 @@
+/**
+ * @file pynuitrack.cpp
+ * @author Silas Alves (silas.alves)
+ * @brief Contains the Nuitrack and NuitrackException claeses.
+ * @version 0.1
+ * @date 2019-09-03
+ * 
+ * @copyright Copyright (c) 2019
+ * 
+ * MIT License
+ * 
+ * Copyright (c) 2019 Silas Franco dos Reis Alves
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is 
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+ * THE SOFTWARE.
+ */
+
 #include "pynuitrack.hpp"
 
 namespace nt = tdv::nuitrack;
 namespace bp = boost::python;
 namespace np = boost::python::numpy;
-
 
 NuitrackException::NuitrackException(std::string message)
 {
@@ -19,7 +50,7 @@ NuitrackException::~NuitrackException() throw()
 {
 }
 
-void translateException(NuitrackException const& e)
+void translateException(NuitrackException const &e)
 {
     PyErr_SetString(PyExc_RuntimeError, e.what());
 }
@@ -82,41 +113,46 @@ void Nuitrack::init(std::string configPath)
     {
         nt::Nuitrack::init(configPath);
     }
-    catch (const nt::Exception& e)
+    catch (const nt::Exception &e)
     {
         throw NuitrackException("Could not initialize Nuitrack");
     }
 
     _depthSensor = nt::DepthSensor::create();
-    _depthSensor->connectOnNewFrame(std::bind(&Nuitrack::_onNewDepthFrame, this, std::placeholders::_1));
+    _depthSensor->connectOnNewFrame(
+        std::bind(&Nuitrack::_onNewDepthFrame, this, std::placeholders::_1));
     _outputModeDepth = _depthSensor->getOutputMode();
 
     _colorSensor = nt::ColorSensor::create();
-    _colorSensor->connectOnNewFrame(std::bind(&Nuitrack::_onNewRGBFrame, this, std::placeholders::_1));
+    _colorSensor->connectOnNewFrame(
+        std::bind(&Nuitrack::_onNewRGBFrame, this, std::placeholders::_1));
     _outputModeColor = _colorSensor->getOutputMode();
 
     _handTracker = nt::HandTracker::create();
-    _handTracker->connectOnUpdate(std::bind(&Nuitrack::_onHandUpdate, this, std::placeholders::_1));
+    _handTracker->connectOnUpdate(
+        std::bind(&Nuitrack::_onHandUpdate, this, std::placeholders::_1));
 
     _userTracker = nt::UserTracker::create();
-    _userTracker->connectOnUpdate(std::bind(&Nuitrack::_onUserUpdate, this, std::placeholders::_1));
+    _userTracker->connectOnUpdate(
+        std::bind(&Nuitrack::_onUserUpdate, this, std::placeholders::_1));
 
     _skeletonTracker = nt::SkeletonTracker::create();
-    _skeletonTracker->connectOnUpdate(std::bind(&Nuitrack::_onSkeletonUpdate, this, std::placeholders::_1));
+    _skeletonTracker->connectOnUpdate(
+        std::bind(&Nuitrack::_onSkeletonUpdate, this, std::placeholders::_1));
 
     _gestureRecognizer = nt::GestureRecognizer::create();
-    _gestureRecognizer->connectOnNewGestures(std::bind(&Nuitrack::_onNewGesture, this, std::placeholders::_1));
+    _gestureRecognizer->connectOnNewGestures(
+        std::bind(&Nuitrack::_onNewGesture, this, std::placeholders::_1));
 
-    _onIssuesUpdateHandler = nt::Nuitrack::connectOnIssuesUpdate(std::bind(&Nuitrack::_onIssuesUpdate,
-                                                                        this, std::placeholders::_1));
-
+    _onIssuesUpdateHandler = nt::Nuitrack::connectOnIssuesUpdate(
+        std::bind(&Nuitrack::_onIssuesUpdate, this, std::placeholders::_1));
 
     // Start Nuitrack
     try
     {
         nt::Nuitrack::run();
     }
-    catch (const nt::Exception& e)
+    catch (const nt::Exception &e)
     {
         std::string msg("Nuitrack update failed: ");
         msg += exceptionType_str[e.type()];
@@ -130,11 +166,11 @@ void Nuitrack::update()
     {
         nt::Nuitrack::waitUpdate(_skeletonTracker);
     }
-    catch (nt::LicenseNotAcquiredException& e)
+    catch (nt::LicenseNotAcquiredException &e)
     {
         throw NuitrackException("License not acquired.");
     }
-    catch (const nt::Exception& e)
+    catch (const nt::Exception &e)
     {
         std::string msg("Nuitrack update failed: ");
         msg += exceptionType_str[e.type()];
@@ -142,58 +178,61 @@ void Nuitrack::update()
     }
 }
 
-void Nuitrack::setDepthCallback(PyObject* callable)
+void Nuitrack::setDepthCallback(PyObject *callable)
 {
     _pyDepthCallback = callable;
 }
 
-void Nuitrack::setColorCallback(PyObject* callable)
+void Nuitrack::setColorCallback(PyObject *callable)
 {
     _pyColorCallback = callable;
 }
 
-void Nuitrack::setSkeletonCallback(PyObject* callable)
+void Nuitrack::setSkeletonCallback(PyObject *callable)
 {
     _pySkeletonCallback = callable;
 }
 
-void Nuitrack::setHandsCallback(PyObject* callable)
+void Nuitrack::setHandsCallback(PyObject *callable)
 {
     _pyHandsCallback = callable;
 }
 
-void Nuitrack::Nuitrack::setUserCallback(PyObject* callable)
+void Nuitrack::Nuitrack::setUserCallback(PyObject *callable)
 {
     _pyUserCallback = callable;
 }
 
-void Nuitrack::setGestureCallback(PyObject* callable)
+void Nuitrack::setGestureCallback(PyObject *callable)
 {
     _pyGestureCallback = callable;
 }
 
-void Nuitrack::setIssueCallback(PyObject* callable)
+void Nuitrack::setIssueCallback(PyObject *callable)
 {
     _pyIssueCallback = callable;
 }
 
 void Nuitrack::_onIssuesUpdate(nt::IssuesData::Ptr issuesData)
 {
-    if(_pyIssueCallback && issuesData)
+    if (_pyIssueCallback && issuesData)
     {
         bp::list listIssues;
         for (int userId = 0; userId < 8; userId++)
         {
             auto issueFB = issuesData->getUserIssue<nt::FrameBorderIssue>(userId);
-            if(issueFB)
-                listIssues.append(_FrameBorderIssue(userId, issueFB->isLeft(),issueFB->isRight(), issueFB->isTop()));
-            
+            if (issueFB)
+                listIssues.append(_FrameBorderIssue(userId, 
+                                                    issueFB->isLeft(),
+                                                    issueFB->isRight(),
+                                                    issueFB->isTop()));
+
             auto issueOcc = issuesData->getUserIssue<nt::OcclusionIssue>(userId);
-            if(issueOcc)
+            if (issueOcc)
                 listIssues.append(_OcclusionIssue(userId));
         }
 
-        if(bp::len(listIssues))
+        if (bp::len(listIssues))
             bp::call<void>(_pyIssueCallback, listIssues);
     }
 }
@@ -204,7 +243,7 @@ void Nuitrack::_onNewGesture(nt::GestureData::Ptr gestureData)
     {
         auto gestures = gestureData->getGestures();
         bp::list listGest;
-        for(nt::Gesture gest : gestures)
+        for (nt::Gesture gest : gestures)
         {
             listGest.append(_Gesture(gest.userId, gest.type));
         }
@@ -216,47 +255,49 @@ void Nuitrack::_onUserUpdate(nt::UserFrame::Ptr frame)
 {
     if (_pyUserCallback != NULL)
     {
-        const uint16_t* depthPtr = frame->getData();
+        const uint16_t *depthPtr = frame->getData();
         int nCols = frame->getCols();
         int nRows = frame->getRows();
 
-        np::ndarray npData = np::from_data(depthPtr, _dtUInt16,
-                                        bp::make_tuple(nRows, nCols),
-                                        bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
-                                        bp::object());
+        np::ndarray npData = np::from_data(
+                    depthPtr, _dtUInt16,
+                    bp::make_tuple(nRows, nCols),
+                    bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
+                    bp::object());
 
         bp::call<void>(_pyUserCallback, npData.copy());
     }
 }
 
-bp::api::object Nuitrack::_extractJointData(nt::Joint joint)
+bp::api::object Nuitrack::_getJointData(nt::Joint joint)
 {
     float fReal[] = {joint.real.x, joint.real.y, joint.real.z};
-    
+
     np::ndarray real = np::from_data(fReal, _dtFloat,
-                                    bp::make_tuple(3),
-                                    bp::make_tuple(sizeof(float)),
-                                    bp::object());
+                                     bp::make_tuple(3),
+                                     bp::make_tuple(sizeof(float)),
+                                     bp::object());
 
     float fProj[] = {joint.proj.x * _outputModeColor.xres,
-                        joint.proj.y * _outputModeColor.yres,
-                        joint.proj.z };
-    
+                     joint.proj.y * _outputModeColor.yres,
+                     joint.proj.z};
+
     np::ndarray proj = np::from_data(fProj, _dtFloat,
-                                    bp::make_tuple(3),
-                                    bp::make_tuple(sizeof(float)),
-                                    bp::object());
-    
-    np::ndarray orientation = np::from_data(joint.orient.matrix, _dtFloat,
-                                    bp::make_tuple(3, 3),
-                                    bp::make_tuple(3 * sizeof(float), sizeof(float)),
-                                    bp::object());
+                                     bp::make_tuple(3),
+                                     bp::make_tuple(sizeof(float)),
+                                     bp::object());
+
+    np::ndarray orientation = np::from_data(
+                joint.orient.matrix, _dtFloat,
+                bp::make_tuple(3, 3),
+                bp::make_tuple(3 * sizeof(float), sizeof(float)),
+                bp::object());
 
     return _Joint(joint.type,
-                    joint.confidence, 
-                    real.copy(),
-                    proj.copy(),
-                    orientation.copy());
+                  joint.confidence,
+                  real.copy(),
+                  proj.copy(),
+                  orientation.copy());
 }
 
 void Nuitrack::_onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
@@ -265,54 +306,54 @@ void Nuitrack::_onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
     {
         bp::list listSkel;
         auto skeletons = userSkeletons->getSkeletons();
-        for (nt::Skeleton skeleton: skeletons)
+        for (nt::Skeleton skel : skeletons)
         {
             bp::list listJoint;
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_HEAD]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_NECK]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_TORSO]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_WAIST]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_COLLAR]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_SHOULDER]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_ELBOW]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_WRIST]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_HAND]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_COLLAR]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_SHOULDER]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_ELBOW]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_WRIST]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_HAND]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_HIP]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_KNEE]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_LEFT_ANKLE]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_HIP]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_KNEE]));
-            listJoint.append(_extractJointData(skeleton.joints[nt::JOINT_RIGHT_ANKLE]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_HEAD]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_NECK]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_TORSO]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_WAIST]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_COLLAR]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_SHOULDER]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_ELBOW]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_WRIST]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_HAND]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_COLLAR]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_SHOULDER]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_ELBOW]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_WRIST]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_HAND]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_HIP]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_KNEE]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_LEFT_ANKLE]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_HIP]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_KNEE]));
+            listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_ANKLE]));
             listSkel.append(listJoint);
         }
 
-        bp::tuple data =  bp::make_tuple(
+        bp::tuple data = bp::make_tuple(
             userSkeletons->getTimestamp(),
             userSkeletons->getNumSkeletons(),
             listSkel);
-        
+
         bp::call<void>(_pySkeletonCallback, data);
     }
 }
-
 
 void Nuitrack::_onNewDepthFrame(nt::DepthFrame::Ptr frame)
 {
     if (_pyDepthCallback != NULL)
     {
-        const uint16_t* depthPtr = frame->getData();
+        const uint16_t *depthPtr = frame->getData();
         int nCols = frame->getCols();
         int nRows = frame->getRows();
 
-        np::ndarray npData = np::from_data(depthPtr, _dtUInt16,
-                                        bp::make_tuple(nRows, nCols),
-                                        bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
-                                        bp::object());
+        np::ndarray npData = np::from_data(
+                    depthPtr, _dtUInt16,
+                    bp::make_tuple(nRows, nCols),
+                    bp::make_tuple(nCols * sizeof(uint16_t), sizeof(uint16_t)),
+                    bp::object());
 
         bp::call<void>(_pyDepthCallback, npData.copy());
     }
@@ -322,38 +363,39 @@ void Nuitrack::_onNewRGBFrame(nt::RGBFrame::Ptr frame)
 {
     if (_pyColorCallback != NULL)
     {
-        const uint8_t* colorPtr = (uint8_t*) frame->getData();
+        const uint8_t *colorPtr = (uint8_t *)frame->getData();
         int nCols = frame->getCols();
         int nRows = frame->getRows();
 
-        np::ndarray npData = np::from_data(colorPtr, _dtUInt8,
-                                        bp::make_tuple(nRows, nCols, 3),
-                                        bp::make_tuple(nCols * 3 * sizeof(uint8_t), 3 * sizeof(uint8_t), sizeof(uint8_t)),
-                                        bp::object());
+        np::ndarray npData = np::from_data(
+            colorPtr, _dtUInt8,
+            bp::make_tuple(nRows, nCols, 3),
+            bp::make_tuple(nCols * 3 * sizeof(uint8_t), 3 * sizeof(uint8_t), sizeof(uint8_t)),
+            bp::object());
 
         bp::call<void>(_pyColorCallback, npData.copy());
     }
 }
 
-bp::api::object Nuitrack::_extractHandData(nt::Hand::Ptr hand)
+bp::api::object Nuitrack::_getHandData(nt::Hand::Ptr hand)
 {
     if (hand && hand->x != -1)
     {
         float fProj[] = {hand->x * _outputModeColor.xres,
-                            hand->y * _outputModeColor.yres};
+                         hand->y * _outputModeColor.yres};
 
         np::ndarray proj = np::from_data(fProj, _dtFloat,
-                                        bp::make_tuple(2),
-                                        bp::make_tuple(sizeof(float)),
-                                        bp::object());
-        
+                                         bp::make_tuple(2),
+                                         bp::make_tuple(sizeof(float)),
+                                         bp::object());
+
         float fReal[] = {hand->xReal, hand->yReal, hand->zReal};
 
         np::ndarray real = np::from_data(fReal, _dtFloat,
-                                        bp::make_tuple(3),
-                                        bp::make_tuple(sizeof(float)),
-                                        bp::object());
-        
+                                         bp::make_tuple(3),
+                                         bp::make_tuple(sizeof(float)),
+                                         bp::object());
+
         return _Hand(hand->click, hand->pressure, proj.copy(), real.copy());
     }
     else
@@ -371,8 +413,8 @@ void Nuitrack::_onHandUpdate(nt::HandTrackerData::Ptr handData)
         {
             auto data = _UserHands(
                 hands.userId,
-                _extractHandData(hands.leftHand), 
-                _extractHandData(hands.leftHand));
+                _getHandData(hands.leftHand),
+                _getHandData(hands.leftHand));
 
             listUserHands.append(data);
         }
@@ -380,8 +422,7 @@ void Nuitrack::_onHandUpdate(nt::HandTrackerData::Ptr handData)
         auto data = bp::make_tuple(
             handData->getTimestamp(),
             handData->getNumUsers(),
-            listUserHands
-        );
+            listUserHands);
 
         bp::call<void>(_pyHandsCallback, data);
     }
@@ -410,7 +451,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .value("swipe_down", nt::GESTURE_SWIPE_DOWN)
         .value("push", nt::GESTURE_PUSH)
         .export_values();
-    
+
     bp::enum_<nt::JointType>("JointType")
         .value("none", nt::JOINT_NONE)
         .value("head", nt::JOINT_HEAD)
@@ -437,13 +478,10 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .value("right_knee", nt::JOINT_RIGHT_KNEE)
         .value("right_ankle", nt::JOINT_RIGHT_ANKLE)
         .value("right_foot", nt::JOINT_RIGHT_FOOT)
-        .export_values();	
+        .export_values();
 
     bp::class_<Nuitrack>("Nuitrack", bp::init<>())
-        .def("init", &Nuitrack::init, nt_init_overloads(
-            bp::arg("configPath")="", 
-            "Path to the configuration file"
-        ))
+        .def("init", &Nuitrack::init, nt_init_overloads(bp::arg("configPath") = "", "Path to the configuration file"))
         .def("release", &Nuitrack::release)
         .def("set_depth_callback", &Nuitrack::setDepthCallback)
         .def("set_color_callback", &Nuitrack::setColorCallback)
@@ -452,6 +490,5 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_user_callback", &Nuitrack::setUserCallback)
         .def("set_gesture_callback", &Nuitrack::setGestureCallback)
         .def("set_issue_callback", &Nuitrack::setIssueCallback)
-        .def("update", &Nuitrack::update)
-    ;
+        .def("update", &Nuitrack::update);
 };
