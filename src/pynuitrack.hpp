@@ -122,6 +122,12 @@ private:
     /// Named tuple "Joint", used by skeleton tracking.
     boost::python::api::object _Joint;
 
+    /// Named tuple "Skeleton", used by skeleton tracking.
+    boost::python::api::object _Skeleton;
+
+    /// Named tuple "SkeletonResult", used by skeleton tracking.
+    boost::python::api::object _SkelResult;
+
     /// Named tuple "Hand", used by hand tracking.
     boost::python::api::object _Hand;
 

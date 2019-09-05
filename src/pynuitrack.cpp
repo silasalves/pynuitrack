@@ -71,6 +71,35 @@ Nuitrack::Nuitrack()
     _collections = bp::import("collections");
     _namedtuple = _collections.attr("namedtuple");
 
+    bp::list fieldsSkelResult;
+    fieldsSkelResult.append("timestamp");
+    fieldsSkelResult.append("skeleton_num");
+    fieldsSkelResult.append("skeletons");
+    _SkelResult = _namedtuple("SkeletonResult", fieldsSkelResult);
+
+    bp::list fieldsSkeleton;
+    fieldsSkeleton.append("head");
+    fieldsSkeleton.append("neck");
+    fieldsSkeleton.append("torso");
+    fieldsSkeleton.append("waist");
+    fieldsSkeleton.append("left_collar");
+    fieldsSkeleton.append("left_shoulder");
+    fieldsSkeleton.append("left_elbow");
+    fieldsSkeleton.append("left_wrist");
+    fieldsSkeleton.append("left_hand");
+    fieldsSkeleton.append("right_collar");
+    fieldsSkeleton.append("right_shoulder");
+    fieldsSkeleton.append("right_elbow");
+    fieldsSkeleton.append("right_wrist");
+    fieldsSkeleton.append("right_hand");
+    fieldsSkeleton.append("left_hip");
+    fieldsSkeleton.append("left_knee");
+    fieldsSkeleton.append("left_ankle");
+    fieldsSkeleton.append("right_hip");
+    fieldsSkeleton.append("right_knee");
+    fieldsSkeleton.append("right_ankle");
+    _Skeleton = _namedtuple("Skeleton", fieldsSkeleton);
+
     bp::list fieldsJoint;
     fieldsJoint.append("type");
     fieldsJoint.append("confidence");
@@ -341,10 +370,10 @@ void Nuitrack::_onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
             listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_HIP]));
             listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_KNEE]));
             listJoint.append(_getJointData(skel.joints[nt::JOINT_RIGHT_ANKLE]));
-            listSkel.append(listJoint);
+            listSkel.append(_Skeleton.attr("_make")(listJoint));
         }
 
-        bp::tuple data = bp::make_tuple(
+        auto data = _SkelResult(
             userSkeletons->getTimestamp(),
             userSkeletons->getNumSkeletons(),
             listSkel);

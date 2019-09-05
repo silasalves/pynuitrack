@@ -23,7 +23,9 @@ def colorCallback(data):
 
 def skelCallback(data):
     # print "s"
-    print data
+    print data[2]
+    if data.skeleton_num:
+        print data.skeletons[0].head.real
 
 def handsCallback(data):
     # print "s"
@@ -41,8 +43,8 @@ a = Nuitrack()
 
 a.set_depth_callback(depthCallback)
 a.set_color_callback(colorCallback)
-# a.set_skeleton_callback(skelCallback)
-a.set_face_callback(skelCallback)
+a.set_skeleton_callback(skelCallback)
+# a.set_face_callback(skelCallback)
 # a.set_hands_callback(handsCallback)
 # a.set_user_callback(userCallback)
 # a.set_gesture_callback(gestureCallback)
