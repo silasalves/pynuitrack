@@ -31,6 +31,7 @@
  */
 
 #include "pynuitrack.hpp"
+#include <boost/algorithm/string.hpp>
 
 namespace nt = tdv::nuitrack;
 namespace bp = boost::python;
@@ -64,6 +65,8 @@ Nuitrack::Nuitrack()
     _pyUserCallback = NULL;
     _pyGestureCallback = NULL;
     _pyIssueCallback = NULL;
+
+    _yaml = bp::import("yaml");
 
     _collections = bp::import("collections");
     _namedtuple = _collections.attr("namedtuple");
@@ -117,6 +120,10 @@ void Nuitrack::init(std::string configPath)
     {
         throw NuitrackException("Could not initialize Nuitrack");
     }
+
+    // These two settings are required to enable face tracking.
+    nt::Nuitrack::setConfigValue("Faces.ToUse", "true");
+    nt::Nuitrack::setConfigValue("DepthProvider.Depth2ColorRegistration", "true");
 
     _depthSensor = nt::DepthSensor::create();
     _depthSensor->connectOnNewFrame(
@@ -191,6 +198,11 @@ void Nuitrack::setColorCallback(PyObject *callable)
 void Nuitrack::setSkeletonCallback(PyObject *callable)
 {
     _pySkeletonCallback = callable;
+}
+
+void Nuitrack::setFaceCallback(PyObject *callable)
+{
+    _pyFaceCallback = callable;
 }
 
 void Nuitrack::setHandsCallback(PyObject *callable)
@@ -339,6 +351,16 @@ void Nuitrack::_onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
 
         bp::call<void>(_pySkeletonCallback, data);
     }
+
+    if (_pyFaceCallback)
+    {
+        std::string faceInfo = nt::Nuitrack::getInstancesJson();
+
+        // Remove the quotes from the JSON file so the (un)quoted numbers can
+        // be read as int or float. Uses PyYAML for parsing.
+        boost::replace_all(faceInfo, "\"", "");
+        bp::call<void>(_pyFaceCallback, _yaml.attr("load")(faceInfo));
+    }
 }
 
 void Nuitrack::_onNewDepthFrame(nt::DepthFrame::Ptr frame)
@@ -486,6 +508,7 @@ BOOST_PYTHON_MODULE(pynuitrack)
         .def("set_depth_callback", &Nuitrack::setDepthCallback)
         .def("set_color_callback", &Nuitrack::setColorCallback)
         .def("set_skeleton_callback", &Nuitrack::setSkeletonCallback)
+        .def("set_face_callback", &Nuitrack::setFaceCallback)
         .def("set_hands_callback", &Nuitrack::setHandsCallback)
         .def("set_user_callback", &Nuitrack::setUserCallback)
         .def("set_gesture_callback", &Nuitrack::setGestureCallback)

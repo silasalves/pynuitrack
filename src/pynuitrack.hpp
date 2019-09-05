@@ -83,6 +83,9 @@ private:
     /// Python callback for the skeleton tracking.
     PyObject *_pySkeletonCallback;
 
+    /// Python callback for the skeleton tracking.
+    PyObject *_pyFaceCallback;
+
     /// Python callback for the hand tracking.
     PyObject *_pyHandsCallback;
 
@@ -106,6 +109,9 @@ private:
     /// Numpy representation of the float type.
     boost::python::numpy::dtype _dtFloat =
         boost::python::numpy::dtype::get_builtin<float>();
+    
+    /// Handler for Python JSON library. 
+    boost::python::api::object _yaml;
 
     /// Handler for Python's collections package.
     boost::python::api::object _collections;
@@ -250,6 +256,13 @@ public:
      * @param callable A Python function.
      */
     void setSkeletonCallback(PyObject *callable);
+
+    /**
+     * @brief Set the Python face-tracker callback.
+     * 
+     * @param callable A Python function.
+     */
+    void setFaceCallback(PyObject *callable);
 
     /**
      * @brief Set the Python hand-tracker callback.

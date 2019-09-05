@@ -42,16 +42,17 @@ a = Nuitrack()
 a.set_depth_callback(depthCallback)
 a.set_color_callback(colorCallback)
 # a.set_skeleton_callback(skelCallback)
+a.set_face_callback(skelCallback)
 # a.set_hands_callback(handsCallback)
 # a.set_user_callback(userCallback)
-a.set_gesture_callback(gestureCallback)
-a.set_issue_callback(gestureCallback)
+# a.set_gesture_callback(gestureCallback)
+# a.set_issue_callback(gestureCallback)
 
 a.init()
 
 # a.update()
 
-frames = 300
+frames = 100
 while frames:
     # print "-"
     a.update()
