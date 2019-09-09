@@ -65,6 +65,7 @@ Nuitrack::Nuitrack()
     _pyUserCallback = NULL;
     _pyGestureCallback = NULL;
     _pyIssueCallback = NULL;
+    _pyFaceCallback = NULL;
 
     _yaml = bp::import("yaml");
 
