@@ -79,6 +79,7 @@ Nuitrack::Nuitrack()
     _SkelResult = _namedtuple("SkeletonResult", fieldsSkelResult);
 
     bp::list fieldsSkeleton;
+    fieldsSkeleton.append("userId");
     fieldsSkeleton.append("head");
     fieldsSkeleton.append("neck");
     fieldsSkeleton.append("torso");
@@ -351,6 +352,7 @@ void Nuitrack::_onSkeletonUpdate(nt::SkeletonData::Ptr userSkeletons)
         for (nt::Skeleton skel : skeletons)
         {
             bp::list listJoint;
+            listJoint.append(skel.id);
             listJoint.append(_getJointData(skel.joints[nt::JOINT_HEAD]));
             listJoint.append(_getJointData(skel.joints[nt::JOINT_NECK]));
             listJoint.append(_getJointData(skel.joints[nt::JOINT_TORSO]));
