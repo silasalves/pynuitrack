@@ -468,7 +468,7 @@ void Nuitrack::_onHandUpdate(nt::HandTrackerData::Ptr handData)
             auto data = _UserHands(
                 hands.userId,
                 _getHandData(hands.leftHand),
-                _getHandData(hands.leftHand));
+                _getHandData(hands.rightHand));
 
             listUserHands.append(data);
         }
